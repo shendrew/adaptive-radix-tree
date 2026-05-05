@@ -12,14 +12,20 @@ private:
     template <typename NodeType>
     using NodeAllocator = typename Allocator::template rebind<NodeType>::other;
 
-    template <typename NodeType>
-    NodeType* alloc_node() {
+    template <typename NodeType, typename... Args>
+    NodeType* alloc_node(Args&&... args) {
         NodeAllocator<NodeType> allocProxy;
         NodeType* ptr = allocProxy.allocate(1);
-        return new (ptr) NodeType();
+        return new (ptr) NodeType{std::forward<Args>(args)...};
     }
 
-private:
+    // private members
+    void* rootNode;
+
+public:
+    AdaptiveRadixTree();
+    ~AdaptiveRadixTree();
+
     template <typename K, typename V>
     void insert_impl(K&& key, V&& value);
 
