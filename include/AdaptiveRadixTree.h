@@ -20,7 +20,7 @@ private:
     }
 
     // private members
-    void* rootNode;
+    Node* rootNode;
 
 public:
     AdaptiveRadixTree();
