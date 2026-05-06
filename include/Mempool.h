@@ -1,8 +1,18 @@
 #pragma once
 
+#include <stddef.h>
+
 // Mempool header
 class ARTMempool {
 
+public:
+    void *allocate(size_t size) {
+        return nullptr;
+    }
+
+    void deallocate(void *ptr, size_t size) {
+        // deallocate memory
+    }
 };
 
 

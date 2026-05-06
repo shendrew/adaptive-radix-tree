@@ -2,11 +2,12 @@
 
 #include <memory>
 #include "Trie.h"
+#include "art/Node.h"
 
 // Adaptive Radix Tree header
-template <typename Allocator = std::allocator<uint8_t>>     // default to standard single byte allocator
-class AdaptiveRadixTree : public Trie<AdaptiveRadixTree> {
-    friend class Trie<AdaptiveRadixTree>;
+template <typename K, typename V, typename Allocator = std::allocator<uint8_t>>     // default to standard single byte allocator
+class AdaptiveRadixTree : public Trie<AdaptiveRadixTree<K, V, Allocator>, K, V> {
+    friend class Trie<AdaptiveRadixTree, K, V>;
 
 private:
     template <typename NodeType>
@@ -19,6 +20,16 @@ private:
         return new (ptr) NodeType{std::forward<Args>(args)...};
     }
 
+    template <typename NodeType>
+    void free_node(Node *node) {
+        NodeType *derivedNode = static_cast<NodeType*>(node);
+        destroy_at(derivedNode);
+        NodeAllocator<NodeType>().deallocate(derivedNode, 1);
+    }
+
+    template <typename NodeType, size_t MaxChildren>
+    void free_subtree(Node *node);
+
     // private members
     Node* rootNode;
 
@@ -26,12 +37,7 @@ public:
     AdaptiveRadixTree();
     ~AdaptiveRadixTree();
 
-    template <typename K, typename V>
     void insert_impl(K&& key, V&& value);
-
-    template <typename K>
     void erase_impl(K&& key);
-
-    template <typename K>
-    void* find_impl(K&& key) const;
+    V* find_impl(K&& key) const;
 };

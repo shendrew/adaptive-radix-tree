@@ -1,14 +1,16 @@
 #pragma once
 
-#include <stdint.h>
+// node types
+constexpr uint8_t NODE4 = 1;
+constexpr uint8_t NODE16 = 2;
+constexpr uint8_t NODE48 = 3;
+constexpr uint8_t NODE256 = 4;
 
-constexpr uint8_t NODE4 = 0;
-constexpr uint8_t NODE16 = 1;
-constexpr uint8_t NODE48 = 2;
-constexpr uint8_t NODE256 = 3;
+// pointer tags
+constexpr uintptr_t LEAF_TAG = 0x01u;
 
-// small 4 bytes header
-struct Node {
+// align nodes to 16 bytes for better cache performance
+struct alignas(64) Node {
     uint8_t type;
     uint8_t numChildren;
     uint16_t prefixLen;
