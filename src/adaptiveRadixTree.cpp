@@ -15,24 +15,24 @@ void AdaptiveRadixTree<K, V, Allocator>::free_subtree(Node *node) {
         Node *child = derivedNode->children[i];
         if (!child) continue;
         switch (child->type) {
-            case NODE4: this->template free_subtree<Node4, 4>(child); break;
-            case NODE16: this->template free_subtree<Node16, 16>(child); break;
-            case NODE48: this->template free_subtree<Node48, 48>(child); break;
-            case NODE256: this->template free_subtree<Node256, 256>(child); break;
+            case NODE4: free_subtree<Node4, 4>(child); break;
+            case NODE16: free_subtree<Node16, 16>(child); break;
+            case NODE48: free_subtree<Node48, 48>(child); break;
+            case NODE256: free_subtree<Node256, 256>(child); break;
         }
     }
     
-    this->template free_node<NodeType>(node);   // free current node
+    free_node<NodeType>(node);   // free current node
 }
 
 template <typename K, typename V, typename Allocator>
 AdaptiveRadixTree<K, V, Allocator>::~AdaptiveRadixTree() {
     if (!rootNode) return;
     switch (rootNode->type) {
-        case NODE4: this->template free_subtree<Node4, 4>(rootNode); break;
-        case NODE16: this->template free_subtree<Node16, 16>(rootNode); break;
-        case NODE48: this->template free_subtree<Node48, 48>(rootNode); break;
-        case NODE256: this->template free_subtree<Node256, 256>(rootNode); break;
+        case NODE4: free_subtree<Node4, 4>(rootNode); break;
+        case NODE16: free_subtree<Node16, 16>(rootNode); break;
+        case NODE48: free_subtree<Node48, 48>(rootNode); break;
+        case NODE256: free_subtree<Node256, 256>(rootNode); break;
     }
 }
 
