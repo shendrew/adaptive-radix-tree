@@ -30,6 +30,9 @@ private:
     template <typename NodeType, size_t MaxChildren>
     void free_subtree(Node *node);
 
+    Node* find_child(Node *node, uint8_t byte) const;
+    Node* search(Node *node, Encoding<K> &key, size_t depth) const;
+
     // private members
     Node* rootNode;
 
@@ -39,5 +42,5 @@ public:
 
     void insert_impl(K&& key, V&& value);
     void erase_impl(K&& key);
-    V* find_impl(K&& key) const;
+    V* at_impl(K&& key) const;
 };
