@@ -95,7 +95,7 @@ Node* AdaptiveRadixTree<K, V, Allocator>::search(Node *node, Encoding<K> &key, s
 
     if (is_leaf(node)) {
         auto leaf = get_leaf_addr<K, V>(node);
-        if (leaf->key == key) {
+        if (leaf->key == key) {     // validate path compression
             return leaf;
         }
         return nullptr;
@@ -110,9 +110,11 @@ template <typename K, typename V, typename Allocator>
 V* AdaptiveRadixTree<K, V, Allocator>::at_impl(K&& key) const {
     if (!rootNode) return nullptr;
 
+    // encode key to byte array
     Encoding<K> encodedKey(std::forward<K>(key));
     Node *resultNode = search(rootNode, encodedKey, 0);
 
+    // return value ptr if leaf found
     if (resultNode && is_leaf(resultNode)) {
         auto leaf = get_leaf_addr<K, V>(resultNode);
         return &leaf->value;
