@@ -50,7 +50,42 @@ void AdaptiveRadixTree<K, V, Allocator>::erase_impl(K&& key) {
 
 template <typename K, typename V, typename Allocator>
 Node* AdaptiveRadixTree<K, V, Allocator>::find_child(Node *node, uint8_t byte) const {
-    // find child implementation here
+    switch (node->type) {
+        case NODE4: {
+            Node4 *derived4 = static_cast<Node4*>(node);
+            for (size_t i = 0; i < derived4->numChildren; i++) {
+                if (derived4->keys[i] == byte) {
+                    return derived4->children[i];
+                }
+            }
+            break;
+        }
+        case NODE16: {
+            Node16 *derived16 = static_cast<Node16*>(node);
+            for (size_t i = 0; i < derived16->numChildren; i++) {
+                if (derived16->keys[i] == byte) {
+                    return derived16->children[i];
+                }
+            }
+            break;
+        }
+        case NODE48: {
+            Node48 *derived48 = static_cast<Node48*>(node);
+            uint8_t idx = derived48->indices[byte];
+            if (idx) {
+                return derived48->children[idx - 1];
+            }
+            break;
+        }
+        case NODE256: {
+            Node256 *derived256 = static_cast<Node256*>(node);
+            return derived256->children[byte];
+            break;
+        }
+        case default:
+            break;
+    }
+
     return nullptr;
 }
 

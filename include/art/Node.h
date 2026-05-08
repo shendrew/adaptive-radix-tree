@@ -31,6 +31,7 @@ struct Node16 : public Node {
 };
 
 // directly map byte to child index
+// 1 indexed, 0 means no child
 struct Node48 : public Node {
     uint8_t indices[256];
     Node *children[48];
