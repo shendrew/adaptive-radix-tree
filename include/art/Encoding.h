@@ -4,9 +4,9 @@
 #include <array>
 #include <bit>
 
-template <size_t Length>
+template <typename K>
 struct alignas(64) Encoding {
-    std::array<uint8_t, Length> bytes;
+    std::array<uint8_t, sizeof(K)> bytes{};
 
     template <typename T, typename... Args>
     constexpr void pack(int offset, T value, Args... args) {
@@ -15,7 +15,7 @@ struct alignas(64) Encoding {
         // byte swap integers from little to big endian for ordering
         if constexpr (std::is_integral_v<T>) {
             if constexpr (std::endian::native == std::endian::little) {
-                value = std::bitswap(value);
+                value = std::byteswap(value);
             }
         }
 
@@ -35,6 +35,3 @@ struct alignas(64) Encoding {
         pack(0,args...);
     }
 };
-
-template <typename... Args>
-Encoding(Args...) -> Encoding<(0 + ... + sizeof(Args))>;

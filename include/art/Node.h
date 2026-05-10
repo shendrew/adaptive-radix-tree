@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stdint.h>
+#include <cstddef>
+#include <type_traits>
 
 // node types
 constexpr uint8_t NODE4 = 1;
@@ -43,9 +45,31 @@ struct Node256 : public Node {
 };
 
 // must reinterpret cast pointer to Node*
-// supports only trivially copyable types for keys
-template <typename K, typename V>
+// should only support byte index addressable keys
+template <typename T>
+concept ARTKey = 
+    std::is_trivially_copyable_v<T> &&      // trivially copyable type
+    std::is_standard_layout_v<T> &&         // no virtual functions
+    requires (T t, size_t i) { t[i]; }      // indexing
+;
+
+template <ARTKey K, typename V>
 struct alignas(64) Leaf {
-    Encoding<K> key;
+    K key;
     V value;
 };
+
+
+// helper functions
+inline bool is_leaf(Node *node) {
+    return (reinterpret_cast<uintptr_t>(node) & LEAF_TAG);
+}
+
+inline Node* make_leaf(void *value) {
+    return reinterpret_cast<Node*>(reinterpret_cast<uintptr_t>(value) | LEAF_TAG);
+}
+
+template <ARTKey K, typename V>
+inline Leaf<K, V>* get_leaf_addr(Node *node) {
+    return reinterpret_cast<Leaf<K, V>*>(reinterpret_cast<uintptr_t>(node) & ~LEAF_TAG);
+}
