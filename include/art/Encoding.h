@@ -1,0 +1,40 @@
+#pragma once
+
+#include <cstddef>
+#include <array>
+#include <bit>
+
+template <size_t Length>
+struct alignas(64) Encoding {
+    std::array<uint8_t, Length> bytes;
+
+    template <typename T, typename... Args>
+    constexpr void pack(int offset, T value, Args... args) {
+        static_assert(std::is_trivial_v<T>, "Encoding only supports trivially copyable types");
+
+        // byte swap integers from little to big endian for ordering
+        if constexpr (std::is_integral_v<T>) {
+            if constexpr (std::endian::native == std::endian::little) {
+                value = std::bitswap(value);
+            }
+        }
+
+        // cast to byte array and copy to struct
+        auto temp = std::bit_cast<std::array<uint8_t, sizeof(T)>>(value);
+        for (size_t i = 0; i < sizeof(T); i++) {
+            bytes[offset + i] = temp[i];
+        }
+
+        if constexpr (sizeof...(Args) > 0) {
+            pack(offset + sizeof(T), args...);
+        }
+    }
+
+    template <typename... Args>
+    constexpr explicit Encoding(Args... args) {
+        pack(0,args...);
+    }
+};
+
+template <typename... Args>
+Encoding(Args...) -> Encoding<(0 + ... + sizeof(Args))>;
