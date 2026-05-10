@@ -2,8 +2,6 @@
 #include "../include/AdaptiveRadixTree.h"
 #endif
 
-#include "../include/art/Encoding.h"
-
 template <typename K, typename V, typename Allocator>
 AdaptiveRadixTree<K, V, Allocator>::AdaptiveRadixTree() : rootNode(nullptr) {}
 
@@ -114,8 +112,7 @@ V* AdaptiveRadixTree<K, V, Allocator>::at_impl(K&& key) const {
     if (!rootNode) return nullptr;
 
     // encode key to byte array
-    Encoding<K> encodedKey(std::forward<K>(key));
-    Node *resultNode = search(rootNode, encodedKey, 0);
+    Node *resultNode = search(rootNode, key, 0);
 
     // return value ptr if leaf found
     if (resultNode && is_leaf(resultNode)) {
