@@ -1,5 +1,8 @@
+#ifndef ADAPTIVE_RADIX_TREE_H
 #include "../include/AdaptiveRadixTree.h"
-#include "../include/art/Node.h"
+#endif
+
+#include "../include/art/Encoding.h"
 
 template <typename K, typename V, typename Allocator>
 AdaptiveRadixTree<K, V, Allocator>::AdaptiveRadixTree() : rootNode(nullptr) {}
@@ -90,7 +93,7 @@ Node* AdaptiveRadixTree<K, V, Allocator>::find_child(Node *node, uint8_t byte) c
 }
 
 template <typename K, typename V, typename Allocator>
-Node* AdaptiveRadixTree<K, V, Allocator>::search(Node *node, Encoding<K> &key, size_t depth) const {
+Node* AdaptiveRadixTree<K, V, Allocator>::search(Node *node, K &key, size_t depth) const {
     if (!node) return nullptr;
 
     if (is_leaf(node)) {
