@@ -3,11 +3,11 @@
 #endif
 
 template <typename K, typename V, typename Allocator>
-AdaptiveRadixTree<K, V, Allocator>::AdaptiveRadixTree() : rootNode(nullptr) {}
+ART::AdaptiveRadixTree<K, V, Allocator>::AdaptiveRadixTree() : rootNode(nullptr) {}
 
 template <typename K, typename V, typename Allocator>
 template <typename NodeType, size_t MaxChildren>
-void AdaptiveRadixTree<K, V, Allocator>::free_subtree(Node *node) {
+void ART::AdaptiveRadixTree<K, V, Allocator>::free_subtree(Node *node) {
     if (!node) return;
     NodeType *derivedNode = static_cast<NodeType*>(node);
 
@@ -27,7 +27,7 @@ void AdaptiveRadixTree<K, V, Allocator>::free_subtree(Node *node) {
 }
 
 template <typename K, typename V, typename Allocator>
-AdaptiveRadixTree<K, V, Allocator>::~AdaptiveRadixTree() {
+ART::AdaptiveRadixTree<K, V, Allocator>::~AdaptiveRadixTree() {
     if (!rootNode) return;
     switch (rootNode->type) {
         case NODE4: free_subtree<Node4, 4>(rootNode); break;
@@ -39,7 +39,7 @@ AdaptiveRadixTree<K, V, Allocator>::~AdaptiveRadixTree() {
 
 
 template <typename K, typename V, typename Allocator>
-inline void AdaptiveRadixTree<K, V, Allocator>::add_child(Node *parent, uint8_t byte, Node *child) {
+inline void ART::AdaptiveRadixTree<K, V, Allocator>::add_child(Node *parent, uint8_t byte, Node *child) {
     //!! TODO grow if needed
     
     if (!parent) return;
@@ -72,7 +72,7 @@ inline void AdaptiveRadixTree<K, V, Allocator>::add_child(Node *parent, uint8_t 
 }
 
 template <typename K, typename V, typename Allocator>
-inline size_t match_prefix(Node *node, K &key, size_t depth) {
+inline size_t ART::detail::match_prefix(Node *node, K &key, size_t depth) {
     //! get some leaf key
     K leafKey;
 
@@ -120,7 +120,7 @@ inline void ART::AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key,
 
     // if prefixes still match, continue to find child after current prefix
     depth = depth + node->prefixLen;
-    Node **nextPtr = find_child_ptr(node, key[depth]);
+    Node **nextPtr = detail::find_child_ptr(node, key[depth]);
     if (nextPtr) {
         insert(*nextPtr, key, leaf, depth+1);
     } else {
@@ -130,21 +130,20 @@ inline void ART::AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key,
 
 
 template <typename K, typename V, typename Allocator>
-void AdaptiveRadixTree<K, V, Allocator>::insert_impl(K &key, V &value) {
+void ART::AdaptiveRadixTree<K, V, Allocator>::insert_impl(K &key, V &value) {
     Leaf *leafNode = alloc_node<Leaf<K, V>>(key, value);
     insert(rootNode, key, make_leaf(leafNode), 0);
 }
 
 template <typename K, typename V, typename Allocator>
-void AdaptiveRadixTree<K, V, Allocator>::erase_impl(K &key) {
+void ART::AdaptiveRadixTree<K, V, Allocator>::erase_impl(K &key) {
     // erase implementation here
 
 }
 
 
 // needs to guarantee that all NON-NULL child_ptr ==> NON-NULL *child_ptr
-template <typename K, typename V, typename Allocator>
-inline Node** find_child_ptr(Node *node, uint8_t byte) {
+inline ART::Node** ART::detail::find_child_ptr(Node *node, uint8_t byte) {
     switch (node->type) {
         case NODE4: {
             Node4 *derived4 = static_cast<Node4*>(node);
@@ -179,7 +178,7 @@ inline Node** find_child_ptr(Node *node, uint8_t byte) {
             }
             return nullptr;
         }
-        case default:
+        default:
             break;
     }
 
@@ -187,7 +186,7 @@ inline Node** find_child_ptr(Node *node, uint8_t byte) {
 }
 
 template <typename K, typename V, typename Allocator>
-Node* AdaptiveRadixTree<K, V, Allocator>::search(Node *node, K &key, size_t depth) const {
+ART::Node* ART::AdaptiveRadixTree<K, V, Allocator>::search(Node *node, K &key, size_t depth) const {
     if (!node) return nullptr;
 
     if (is_leaf(node)) {
@@ -207,7 +206,7 @@ Node* AdaptiveRadixTree<K, V, Allocator>::search(Node *node, K &key, size_t dept
 }
 
 template <typename K, typename V, typename Allocator>
-V* AdaptiveRadixTree<K, V, Allocator>::at_impl(K &key) const {
+V* ART::AdaptiveRadixTree<K, V, Allocator>::at_impl(K &key) const {
     if (!rootNode) return nullptr;
 
     // encode key to byte array

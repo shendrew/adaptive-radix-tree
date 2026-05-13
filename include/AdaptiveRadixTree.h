@@ -5,47 +5,57 @@
 #include "Trie.h"
 #include "art/Node.h"
 
-// Adaptive Radix Tree header
-template <typename K, typename V, typename Allocator = std::allocator<uint8_t>>     // default to standard single byte allocator
-class AdaptiveRadixTree : public Trie<AdaptiveRadixTree<K, V, Allocator>, K, V> {
-    friend class Trie<AdaptiveRadixTree, K, V>;
+namespace ART {
 
-private:
-    template <typename NodeType>
-    using NodeAllocator = typename Allocator::template rebind<NodeType>::other;
+    namespace detail {
+        inline Node** find_child_ptr(Node *node, uint8_t byte);
 
-    template <typename NodeType, typename... Args>
-    NodeType* alloc_node(Args&&... args) {
-        NodeAllocator<NodeType> allocProxy;
-        NodeType* ptr = allocProxy.allocate(1);
-        return new (ptr) NodeType{std::forward<Args>(args)...};
+        template <typename K>
+        inline size_t match_prefix(Node *node, K &key, size_t depth);
     }
 
-    template <typename NodeType>
-    void free_node(Node *node) {
-        NodeType *derivedNode = static_cast<NodeType*>(node);
-        destroy_at(derivedNode);
-        NodeAllocator<NodeType>().deallocate(derivedNode, 1);
-    }
+    // Adaptive Radix Tree header
+    template <typename K, typename V, typename Allocator = std::allocator<uint8_t>>     // default to standard single byte allocator
+    class AdaptiveRadixTree : public Trie<AdaptiveRadixTree<K, V, Allocator>, K, V> {
+        friend class Trie<AdaptiveRadixTree, K, V>;
 
-    template <typename NodeType, size_t MaxChildren>
-    void free_subtree(Node *node);
+    private:
+        template <typename NodeType>
+        using NodeAllocator = typename Allocator::template rebind<NodeType>::other;
 
-    Node* find_child(Node *node, uint8_t byte) const;
-    Node* search(Node *node, K &key, size_t depth) const;
+        template <typename NodeType, typename... Args>
+        NodeType* alloc_node(Args... args) {
+            NodeAllocator<NodeType> allocProxy;
+            NodeType* ptr = allocProxy.allocate(1);
+            return new (ptr) NodeType{args...};
+        }
 
-    // private members
-    Node* rootNode;
+        template <typename NodeType>
+        void free_node(Node *node) {
+            NodeType *derivedNode = static_cast<NodeType*>(node);
+            destroy_at(derivedNode);
+            NodeAllocator<NodeType>().deallocate(derivedNode, 1);
+        }
 
-public:
-    AdaptiveRadixTree();
-    ~AdaptiveRadixTree();
+        template <typename NodeType, size_t MaxChildren>
+        void free_subtree(Node *node);
 
-    void insert_impl(K&& key, V&& value);
-    void erase_impl(K&& key);
-    V* at_impl(K&& key) const;
-};
+        Node* search(Node *node, K &key, size_t depth) const;
+        inline void add_child(Node *parent, uint8_t byte, Node *child);
+        inline void insert(Node *&node, K &key, Node *leaf, size_t depth);
 
+        // private members
+        Node* rootNode;
+
+    public:
+        AdaptiveRadixTree();
+        ~AdaptiveRadixTree();
+
+        void insert_impl(K& key, V& value);
+        void erase_impl(K& key);
+        V* at_impl(K& key) const;
+    };
+}
 
 // header implementation
 #include "../src/AdaptiveRadixTree.ipp"
