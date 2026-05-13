@@ -73,48 +73,9 @@ inline void ART::AdaptiveRadixTree<K, V, Allocator>::add_child(Node *parent, uin
 
 // returns the number of matching prefix bytes starting at a given depth
 template <typename K, typename V, typename Allocator>
-inline size_t ART::detail::match_prefix(Node *node, K &key, size_t depth) {
-    // get key of some leaf in current subtree
-    K leafKey;
-    Node *curNode = node;
-    while (!is_leaf()) {
-        // get first child
-        switch (curNode->type) {
-            case NODE4: {
-                Node4 *derived4 = static_cast<Node4*>(curNode);
-                curNode = derived4->children[0];
-                break;
-            }
-            case NODE16: {
-                Node16 *derived16 = static_cast<Node16*>(curNode);
-                curNode = derived16->children[0];
-                break;
-            }
-            case NODE48: {
-                Node48 *derived48 = static_cast<Node48*>(curNode);
-                for (size_t i = 0; i < 48; i++) {
-                    if (derived48->children[i]) {
-                        curNode = derived48->children[i];
-                        break;
-                    }
-                }
-                break;
-            }
-            case NODE256: {
-                Node256 *derived256 = static_cast<Node256*>(curNode);
-                for (size_t i = 0; i < 256; i++) {
-                    if (derived256->children[i]) {
-                        curNode = derived256->children[i];
-                        break;
-                    }
-                }
-                break;
-            }
-        }
-    }
-
+inline size_t ART::detail::match_prefix(K &key1, K &key2, size_t depth) {
     size_t matchLen = 0;
-    while (matchLen < node->prefixLen && key[depth + matchLen] == leafKey[depth + matchLen]) {
+    while (matchLen < node->prefixLen && key1[depth + matchLen] == key2[depth + matchLen]) {
         matchLen++;
     }
     return matchLen;
@@ -147,11 +108,26 @@ inline void ART::AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key,
         return;
     }
 
-    //! design choice: need to fetch leaf key at each step to verify prefix match
-    //! slower write faster read
-    
-
-
+    // split current node if new key branches in prefix
+    // design choice: need to fetch leaf key at each step to verify path compression
+    // => slower write faster read
+    Node *leafInSubtree = get_leaf(node);
+    K oldKey = get_leaf_key(leafInSubtree);
+    size_t matchedPrefixLen = detail::match_prefix(key, oldKey, depth);
+    if (matchedPrefixLen < node->prefixLen) {
+        Node *newNode = alloc_node<Node4>({
+            .type = NODE4,
+            .numChildren = 0,
+            .prefixLen = matchedPrefixLen,
+            .keys = {0},
+            .children = {nullptr}
+        });
+        node->prefixLen = node->prefixLen - (matchedPrefixLen + 1);   // adjust old prefix len
+        add_child(newNode, key[depth + matchedPrefixLen], leaf);
+        add_child(newNode, oldKey[depth + matchedPrefixLen], node);
+        node = newNode;
+        return;
+    }
 
     // if prefixes still match, continue to find child after current prefix
     depth = depth + node->prefixLen;
@@ -249,8 +225,7 @@ V* ART::AdaptiveRadixTree<K, V, Allocator>::at_impl(K &key) const {
 
     // return value ptr if leaf found
     if (resultNode && is_leaf(resultNode)) {
-        auto leaf = get_leaf_addr<K, V>(resultNode);
-        return &leaf->value;
+        return get_leaf_value<V>(resultNode);
     }
     return nullptr;
 }

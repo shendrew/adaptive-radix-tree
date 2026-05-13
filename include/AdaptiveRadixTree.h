@@ -11,7 +11,7 @@ namespace ART {
         inline Node** find_child_ptr(Node *node, uint8_t byte);
 
         template <typename K>
-        inline size_t match_prefix(Node *node, K &key, size_t depth);
+        inline size_t match_prefix(K &key1, K &key2, size_t depth);
     }
 
     // Adaptive Radix Tree header
