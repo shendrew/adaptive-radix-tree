@@ -1,5 +1,5 @@
 #ifndef ADAPTIVE_RADIX_TREE_H
-#include "../include/AdaptiveRadixTree.h"
+#include "include/AdaptiveRadixTree.h"
 #endif
 
 template <typename K, typename V, typename Allocator>
@@ -95,7 +95,6 @@ inline void ART::AdaptiveRadixTree<K, V, Allocator>::grow(Node *&node) {
         case NODE256:
             throw std::runtime_error("Cannot grow node beyond 256 children");
     }
-    node = static_cast<Node*>(newNode);
 }
 
 template <typename K, typename V, typename Allocator>

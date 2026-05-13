@@ -59,4 +59,4 @@ namespace ART {
 }
 
 // header implementation
-#include "../src/AdaptiveRadixTree.ipp"
+#include "src/AdaptiveRadixTree.ipp"
