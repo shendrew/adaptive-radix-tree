@@ -8,6 +8,10 @@ template <typename K>
 struct alignas(64) Encoding {
     std::array<uint8_t, sizeof(K)> bytes{};
 
+    constexpr size_t size() const {
+        return sizeof(K);
+    }
+
     template <typename T, typename... Args>
     constexpr void pack(int offset, T value, Args... args) {
         static_assert(std::is_trivial_v<T>, "Encoding only supports trivially copyable types");

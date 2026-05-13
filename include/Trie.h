@@ -11,18 +11,18 @@ private:
     }
 
 public:
-    void insert(K&& key, V&& value) {
-        underlying().insert_impl(std::forward<K>(key), std::forward<V>(value));
+    void insert(K& key, V& value) {
+        underlying().insert_impl(key, value);
     }
 
-    void erase(K&& key) {
-        underlying().erase_impl(std::forward<K>(key));
+    void erase(K& key) {
+        underlying().erase_impl(key);
     }
 
-    V* at(K&& key) {
-        return underlying().at_impl(std::forward<K>(key));
+    V* at(K& key) {
+        return underlying().at_impl(key);
     }
-    const V* at(K&& key) const {
-        return underlying().at_impl(std::forward<K>(key));
+    const V* at(K& key) const {
+        return underlying().at_impl(key);
     }
 };
