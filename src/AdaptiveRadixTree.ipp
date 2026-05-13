@@ -38,9 +38,71 @@ ART::AdaptiveRadixTree<K, V, Allocator>::~AdaptiveRadixTree() {
 }
 
 
+// allocate next bigger node, free old memory. fail if already size 256
 template <typename K, typename V, typename Allocator>
-inline void ART::AdaptiveRadixTree<K, V, Allocator>::add_child(Node *parent, uint8_t byte, Node *child) {
-    //!! TODO grow if needed
+inline void ART::AdaptiveRadixTree<K, V, Allocator>::grow(Node *&node) {
+    switch (node->type) {
+        case NODE4: {
+            Node4 *derived4 = static_cast<Node4*>(node);
+            Node16 *newNode = alloc_node<Node16>({
+                .type = NODE16,
+                .numChildren = derived4->numChildren,
+                .prefixLen = derived4->prefixLen,
+                .keys = {0},
+                .children = {nullptr}
+            });
+            for (size_t i = 0; i < derived4->numChildren; i++) {
+                newNode->keys[i] = derived4->keys[i];
+                newNode->children[i] = derived4->children[i];
+            }
+            free_node<Node4>(node);
+            break;
+        }
+        case NODE16: {
+            Node16 *derived16 = static_cast<Node16*>(node);
+            Node48 *newNode = alloc_node<Node48>({
+                .type = NODE48,
+                .numChildren = derived16->numChildren,
+                .prefixLen = derived16->prefixLen,
+                .indices = {0},
+                .children = {nullptr}
+            });
+            for (size_t i = 0; i < derived16->numChildren; i++) {
+                uint8_t byte = derived16->keys[i];
+                newNode->indices[byte] = i + 1;
+                newNode->children[i] = derived16->children[i];
+            }
+            free_node<Node16>(node);
+            break;
+        }
+        case NODE48: {
+            Node48 *derived48 = static_cast<Node48*>(node);
+            Node256 *newNode = alloc_node<Node256>({
+                .type = NODE256,
+                .numChildren = derived48->numChildren,
+                .prefixLen = derived48->prefixLen,
+                .children = {nullptr}
+            });
+            for (size_t i = 0; i < 256; i++) {
+                uint8_t idx = derived48->indices[i];
+                if (idx) {
+                    newNode->children[i] = derived48->children[idx - 1];
+                }
+            }
+            free_node<Node48>(node);
+            break;
+        }
+        case NODE256:
+            throw std::runtime_error("Cannot grow node beyond 256 children");
+    }
+    node = static_cast<Node*>(newNode);
+}
+
+template <typename K, typename V, typename Allocator>
+inline void ART::AdaptiveRadixTree<K, V, Allocator>::add_child(Node *&parent, uint8_t byte, Node *child) {
+    if (is_full(parent)) {
+        grow(parent);
+    }
     
     if (!parent) return;
     switch (parent->type) {

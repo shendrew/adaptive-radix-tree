@@ -41,7 +41,8 @@ namespace ART {
         void free_subtree(Node *node);
 
         Node* search(Node *node, K &key, size_t depth) const;
-        inline void add_child(Node *parent, uint8_t byte, Node *child);
+        inline void add_child(Node *&parent, uint8_t byte, Node *child);
+        inline void grow(Node *&node);
         inline void insert(Node *&node, K &key, Node *leaf, size_t depth);
 
         // private members

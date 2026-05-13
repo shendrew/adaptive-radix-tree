@@ -40,4 +40,15 @@ namespace ART {
     struct Node256 : public Node {
         Node *children[256];
     };
+
+    
+    inline bool is_full(Node *node) {
+        switch (node->type) {
+            case NODE4: return node->numChildren == 4;
+            case NODE16: return node->numChildren == 16;
+            case NODE48: return node->numChildren == 48;
+            case NODE256: return node->numChildren == 256;
+            default: return false;
+        }
+    }
 }
