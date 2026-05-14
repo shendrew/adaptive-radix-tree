@@ -1,3 +1,7 @@
+#include <cmath>
+#include <format>
+#include <iostream>
+
 using namespace ART;
 
 template <ARTKey K, typename V, typename Allocator>
@@ -334,4 +338,101 @@ inline V* AdaptiveRadixTree<K, V, Allocator>::at_impl(K &key) const {
         return get_leaf_value<K, V>(resultNode);
     }
     return nullptr;
+}
+
+template <ARTKey K, typename V, typename Allocator>
+void AdaptiveRadixTree<K, V, Allocator>::collect_stats(Node *node, size_t depth, TreeStats &stats) const {
+    if (!node) return;
+
+    if (is_leaf(node)) {
+        stats.leaf_count++;
+        stats.depths.push_back(depth);
+        return;
+    }
+
+    // Count node by type
+    switch (node->type) {
+        case NODE4: stats.node4_count++; break;
+        case NODE16: stats.node16_count++; break;
+        case NODE48: stats.node48_count++; break;
+        case NODE256: stats.node256_count++; break;
+    }
+
+    // Recurse to all children
+    switch (node->type) {
+        case NODE4: {
+            Node4 *derived = reinterpret_cast<Node4*>(node);
+            for (size_t i = 0; i < derived->header.numChildren; i++) {
+                collect_stats(derived->children[i], depth + 1, stats);
+            }
+            break;
+        }
+        case NODE16: {
+            Node16 *derived = reinterpret_cast<Node16*>(node);
+            for (size_t i = 0; i < derived->header.numChildren; i++) {
+                collect_stats(derived->children[i], depth + 1, stats);
+            }
+            break;
+        }
+        case NODE48: {
+            Node48 *derived = reinterpret_cast<Node48*>(node);
+            for (size_t i = 0; i < derived->header.numChildren; i++) {
+                collect_stats(derived->children[i], depth + 1, stats);
+            }
+            break;
+        }
+        case NODE256: {
+            Node256 *derived = reinterpret_cast<Node256*>(node);
+            for (size_t i = 0; i < 256; i++) {
+                if (derived->children[i]) {
+                    collect_stats(derived->children[i], depth + 1, stats);
+                }
+            }
+            break;
+        }
+    }
+}
+
+template <ARTKey K, typename V, typename Allocator>
+void AdaptiveRadixTree<K, V, Allocator>::print_info() const {
+    if (!rootNode) {
+        std::cout << std::format("Tree is empty\n");
+        return;
+    }
+
+    TreeStats stats;
+    collect_stats(rootNode, 0, stats);
+
+    size_t total_nodes = stats.node4_count + stats.node16_count + stats.node48_count + stats.node256_count;
+
+    std::cout << std::format("\n=== Adaptive Radix Tree Info ===\n");
+    std::cout << std::format("Node counts:\n");
+    std::cout << std::format("  NODE4:  {}\n", stats.node4_count);
+    std::cout << std::format("  NODE16: {}\n", stats.node16_count);
+    std::cout << std::format("  NODE48: {}\n", stats.node48_count);
+    std::cout << std::format("  NODE256: {}\n", stats.node256_count);
+    std::cout << std::format("  Total internal nodes: {}\n", total_nodes);
+    std::cout << std::format("  Leaf nodes: {}\n", stats.leaf_count);
+
+    if (!stats.depths.empty()) {
+        // Calculate mean
+        double sum = 0;
+        for (size_t d : stats.depths) {
+            sum += d;
+        }
+        double mean = sum / stats.depths.size();
+
+        // Calculate standard deviation
+        double variance = 0;
+        for (size_t d : stats.depths) {
+            variance += (d - mean) * (d - mean);
+        }
+        variance /= stats.depths.size();
+        double stddev = std::sqrt(variance);
+
+        std::cout << std::format("\nLeaf depth statistics:\n");
+        std::cout << std::format("    Mean depth: {}\n", mean);
+        std::cout << std::format("    Std deviation: {}\n", stddev);
+    }
+    std::cout << std::format("================================\n\n");
 }

@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 #include "Trie.h"
 #include "art/Node.h"
 #include "art/Leaf.h"
@@ -19,6 +20,15 @@ namespace ART {
         template <ARTKey K>
         inline size_t match_prefix(const K &key1, const K &key2, size_t depth, size_t prefixLen);
     }
+
+    struct TreeStats {
+        size_t node4_count = 0;
+        size_t node16_count = 0;
+        size_t node48_count = 0;
+        size_t node256_count = 0;
+        size_t leaf_count = 0;
+        std::vector<size_t> depths;
+    };
 
     // Adaptive Radix Tree header
     template <ARTKey K, typename V, typename Allocator = std::allocator<uint8_t>>     // default to standard single byte allocator
@@ -56,6 +66,8 @@ namespace ART {
         
         void add_child(Node *&parent, uint8_t byte, Node *child);
 
+        void collect_stats(Node *node, size_t depth, TreeStats &stats) const;
+
         // private members
         Node* rootNode;
 
@@ -67,6 +79,8 @@ namespace ART {
         inline void update_impl(K& key, V& value);
         inline void erase_impl(K& key);
         inline V* at_impl(K& key) const;
+        
+        void print_info() const;
     };
 }
 
