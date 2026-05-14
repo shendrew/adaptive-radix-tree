@@ -19,18 +19,18 @@ int main() {
     int value4 = 40;
     int value5 = 50;
 
-    tree.insert_impl(key1, value1);
-    tree.insert_impl(key2, value2);
-    tree.insert_impl(key3, value3);
-    tree.insert_impl(key4, value4);
-    tree.insert_impl(key5, value5);
+    tree.insert(key1, value1);
+    tree.insert(key2, value2);
+    tree.insert(key3, value3);
+    tree.insert(key4, value4);
+    tree.insert(key5, value5);
 
 
-    std::cout << "Value for key1: " << *(tree.at_impl(key1)) << std::endl;
-    std::cout << "Value for key2: " << *(tree.at_impl(key2)) << std::endl;
-    std::cout << "Value for key3: " << *(tree.at_impl(key3)) << std::endl;
-    std::cout << "Value for key4: " << *(tree.at_impl(key4)) << std::endl;
-    std::cout << "Value for key5: " << *(tree.at_impl(key5)) << std::endl;
+    std::cout << "Value for key1: " << *(tree.at(key1)) << std::endl;
+    std::cout << "Value for key2: " << *(tree.at(key2)) << std::endl;
+    std::cout << "Value for key3: " << *(tree.at(key3)) << std::endl;
+    std::cout << "Value for key4: " << *(tree.at(key4)) << std::endl;
+    std::cout << "Value for key5: " << *(tree.at(key5)) << std::endl;
 
     tree.print_info();
 

@@ -228,7 +228,7 @@ Node* AdaptiveRadixTree<K, V, Allocator>::search(Node *node, K &key, size_t dept
 
 // need to take in ref to node to restructure tree if needed
 template <ARTKey K, typename V, typename Allocator>
-void AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key, Node *leaf, size_t depth, bool is_update) {    
+void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node *&node, K &key, Node *leaf, size_t depth, bool is_update) {    
     // CASE 1: empty slot, insert leaf here
     if (!node) {
         node = leaf;
@@ -297,7 +297,7 @@ void AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key, Node *leaf,
     depth = depth + node->prefixLen;
     Node **nextPtr = detail::find_child_ptr(node, key[depth]);
     if (nextPtr) {
-        insert(*nextPtr, key, leaf, depth+1, is_update);
+        insert_impl(*nextPtr, key, leaf, depth+1, is_update);
     } else {
         // CASE 5: no matching child, insert leaf here
         // guaranteed to have space since at most 256 diff byte values
@@ -307,31 +307,31 @@ void AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key, Node *leaf,
 
 
 template <ARTKey K, typename V, typename Allocator>
-inline void AdaptiveRadixTree<K, V, Allocator>::insert_impl(K &key, V &value) {
+inline void AdaptiveRadixTree<K, V, Allocator>::insert(K &key, V &value) {
     auto *leafNode = alloc_node<Leaf<K, V>>(Leaf<K, V>{
         .key = key,
         .value = value
     });
-    insert(rootNode, key, make_leaf(leafNode), 0, false);
+    insert_impl(rootNode, key, make_leaf(leafNode), 0, false);
 }
 
 template <ARTKey K, typename V, typename Allocator>
-inline void AdaptiveRadixTree<K, V, Allocator>::update_impl(K &key, V &value) {
+inline void AdaptiveRadixTree<K, V, Allocator>::update(K &key, V &value) {
     auto *leafNode = alloc_node<Leaf<K, V>>(Leaf<K, V>{
         .key = key,
         .value = value
     });
-    insert(rootNode, key, make_leaf(leafNode), 0, true);
+    insert_impl(rootNode, key, make_leaf(leafNode), 0, true);
 }
 
 template <ARTKey K, typename V, typename Allocator>
-inline void AdaptiveRadixTree<K, V, Allocator>::erase_impl(K &key) {
+inline void AdaptiveRadixTree<K, V, Allocator>::erase(K &key) {
     // erase implementation here
 
 }
 
 template <ARTKey K, typename V, typename Allocator>
-inline V* AdaptiveRadixTree<K, V, Allocator>::at_impl(K &key) const {
+inline V* AdaptiveRadixTree<K, V, Allocator>::at(K &key) const {
     if (!rootNode) return nullptr;
 
     // encode key to byte array
@@ -397,6 +397,7 @@ void AdaptiveRadixTree<K, V, Allocator>::collect_stats(Node *node, size_t depth,
     }
 }
 
+// note: written by AI
 template <ARTKey K, typename V, typename Allocator>
 void AdaptiveRadixTree<K, V, Allocator>::print_info() const {
     if (!rootNode) {

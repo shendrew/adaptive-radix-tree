@@ -4,7 +4,6 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "Trie.h"
 #include "art/Node.h"
 #include "art/Leaf.h"
 
@@ -32,9 +31,7 @@ namespace ART {
 
     // Adaptive Radix Tree header
     template <ARTKey K, typename V, typename Allocator = std::allocator<uint8_t>>     // default to standard single byte allocator
-    class AdaptiveRadixTree : public Trie<AdaptiveRadixTree<K, V, Allocator>, K, V> {
-        friend class Trie<AdaptiveRadixTree, K, V>;
-
+    class AdaptiveRadixTree{
     private:
         template <typename NodeType>
         using NodeAllocator = typename std::allocator_traits<Allocator>::template rebind_alloc<NodeType>;
@@ -56,7 +53,7 @@ namespace ART {
         void free_subtree(Node *node);
 
         Node* search(Node *node, K &key, size_t depth) const;
-        void insert(Node *&node, K &key, Node *leaf, size_t depth, bool is_update);
+        void insert_impl(Node *&node, K &key, Node *leaf, size_t depth, bool is_update);
 
         inline void grow(Node *&node);
         void grow_4(Node *&node);
@@ -74,10 +71,10 @@ namespace ART {
         AdaptiveRadixTree();
         ~AdaptiveRadixTree();
 
-        inline void insert_impl(K& key, V& value);
-        inline void update_impl(K& key, V& value);
-        inline void erase_impl(K& key);
-        inline V* at_impl(K& key) const;
+        inline void insert(K& key, V& value);
+        inline void update(K& key, V& value);
+        inline void erase(K& key);
+        inline V* at(K& key) const;
         
         void print_info() const;
     };
