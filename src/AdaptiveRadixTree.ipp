@@ -283,9 +283,9 @@ Node* AdaptiveRadixTree<K, V, Allocator>::search(Node *node, K &key, size_t dept
     if (!node) return nullptr;
 
     if (is_leaf(node)) {
-        auto leaf = get_leaf_addr<K, V>(node);
-        if (leaf->key == key) {     // validate path compression
-            return reinterpret_cast<Node*>(leaf);
+        auto leafKey = get_leaf_key<K, V>(node);
+        if (leafKey == key) {     // validate path compression
+            return node;
         }
         return nullptr;
     }
@@ -306,7 +306,7 @@ V* AdaptiveRadixTree<K, V, Allocator>::at_impl(K &key) const {
     Node *resultNode = search(rootNode, key, 0);
 
     // return value ptr if leaf found
-    if (resultNode && is_leaf(resultNode)) {
+    if (resultNode) {
         return get_leaf_value<K, V>(resultNode);
     }
     return nullptr;
