@@ -2,6 +2,7 @@
 #define ADAPTIVE_RADIX_TREE_H
 
 #include <memory>
+#include <utility>
 #include "Trie.h"
 #include "art/Node.h"
 #include "art/Leaf.h"
@@ -24,16 +25,16 @@ namespace ART {
         template <typename NodeType>
         using NodeAllocator = typename std::allocator_traits<Allocator>::template rebind_alloc<NodeType>;
 
-        template <typename NodeType, typename... Args>
-        NodeType* alloc_node(Args... args) {
+        template <typename NodeType, typename T>
+        NodeType* alloc_node(T&& value) {
             NodeAllocator<NodeType> allocProxy;
             NodeType* ptr = allocProxy.allocate(1);
-            return new (ptr) NodeType{args...};
+            return new (ptr) NodeType(std::forward<T>(value));
         }
 
         template <typename NodeType>
         void free_node(Node *node) {
-            NodeType *derivedNode = static_cast<NodeType*>(node);
+            NodeType *derivedNode = reinterpret_cast<NodeType*>(node);
             std::destroy_at(derivedNode);
             NodeAllocator<NodeType>().deallocate(derivedNode, 1);
         }

@@ -18,26 +18,30 @@ namespace ART {
     };
 
     // store key and child in same indices
-    struct Node4 : public Node {
+    struct Node4 {
+        Node header;
         uint8_t keys[4];
         Node *children[4];
     };
 
     // same as Node4
-    struct Node16 : public Node {
+    struct Node16 {
+        Node header;
         uint8_t keys[16];
         Node *children[16];
     };
 
     // directly map byte to child index
     // 1 indexed, 0 means no child
-    struct Node48 : public Node {
+    struct Node48 {
+        Node header;
         uint8_t indices[256];
         Node *children[48];
     };
 
     // array of 256 children, indexed by byte
-    struct Node256 : public Node {
+    struct Node256 {
+        Node header;
         Node *children[256];
     };
 
@@ -51,4 +55,5 @@ namespace ART {
             default: return false;
         }
     }
+
 }

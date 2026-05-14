@@ -42,4 +42,6 @@ struct alignas(64) Encoding {
     uint8_t operator[](size_t i) const {
         return bytes[i];
     }
+
+    bool operator==(const Encoding&) const = default;
 };

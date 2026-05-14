@@ -40,17 +40,17 @@ namespace ART {
             // get first child
             switch (curNode->type) {
                 case NODE4: {
-                    Node4 *derived4 = static_cast<Node4*>(curNode);
+                    Node4 *derived4 = reinterpret_cast<Node4*>(curNode);
                     curNode = derived4->children[0];
                     break;
                 }
                 case NODE16: {
-                    Node16 *derived16 = static_cast<Node16*>(curNode);
+                    Node16 *derived16 = reinterpret_cast<Node16*>(curNode);
                     curNode = derived16->children[0];
                     break;
                 }
                 case NODE48: {
-                    Node48 *derived48 = static_cast<Node48*>(curNode);
+                    Node48 *derived48 = reinterpret_cast<Node48*>(curNode);
                     for (size_t i = 0; i < 48; i++) {
                         if (derived48->children[i]) {
                             curNode = derived48->children[i];
@@ -60,7 +60,7 @@ namespace ART {
                     break;
                 }
                 case NODE256: {
-                    Node256 *derived256 = static_cast<Node256*>(curNode);
+                    Node256 *derived256 = reinterpret_cast<Node256*>(curNode);
                     for (size_t i = 0; i < 256; i++) {
                         if (derived256->children[i]) {
                             curNode = derived256->children[i];
