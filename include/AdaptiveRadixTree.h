@@ -54,13 +54,24 @@ namespace ART {
 
         Node* search(Node *node, K &key, size_t depth) const;
         void insert_impl(Node *&node, K &key, Node *leaf, size_t depth, bool is_update);
+        bool erase_impl(Node *&node, K &key, size_t depth);
 
         inline void grow(Node *&node);
         void grow_4(Node *&node);
         void grow_16(Node *&node);
         void grow_48(Node *&node);
-        
+
+        void shrink_4(Node *&node);
+        void shrink_16(Node *&node);
+        void shrink_48(Node *&node);
+        void shrink_256(Node *&node);
+
         void add_child(Node *&parent, uint8_t byte, Node *child);
+        inline void remove_child(Node *&parent, uint8_t byte);
+        void remove_child_4(Node *&parent, uint8_t byte);
+        void remove_child_16(Node *&parent, uint8_t byte);
+        void remove_child_48(Node *&parent, uint8_t byte);
+        void remove_child_256(Node *&parent, uint8_t byte);
 
         void collect_stats(Node *node, size_t depth, TreeStats &stats) const;
 
