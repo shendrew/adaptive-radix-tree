@@ -80,13 +80,13 @@ namespace ART {
         return reinterpret_cast<Leaf<K, V>*>(reinterpret_cast<uintptr_t>(node) & ~LEAF_TAG);
     }
 
-    template <typename V>
+    template <ARTKey K, typename V>
     inline V* get_leaf_value(Node *node) {
-        return &get_leaf_addr(node)->value;
+        return &get_leaf_addr<K, V>(node)->value;
     }
 
-    template <ARTKey K>
+    template <ARTKey K, typename V>
     inline const K& get_leaf_key(Node *node) {
-        return get_leaf_addr(node)->key;
+        return get_leaf_addr<K, V>(node)->key;
     }
 }

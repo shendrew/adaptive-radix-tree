@@ -38,4 +38,8 @@ struct alignas(64) Encoding {
     constexpr explicit Encoding(Args... args) {
         pack(0,args...);
     }
+
+    uint8_t operator[](size_t i) const {
+        return bytes[i];
+    }
 };

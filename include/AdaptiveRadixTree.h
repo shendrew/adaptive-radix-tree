@@ -4,24 +4,25 @@
 #include <memory>
 #include "Trie.h"
 #include "art/Node.h"
+#include "art/Leaf.h"
 
 namespace ART {
 
     namespace detail {
         inline Node** find_child_ptr(Node *node, uint8_t byte);
 
-        template <typename K>
-        inline size_t match_prefix(K &key1, K &key2, size_t depth);
+        template <ARTKey K>
+        inline size_t match_prefix(const K &key1, const K &key2, size_t depth, size_t prefixLen);
     }
 
     // Adaptive Radix Tree header
-    template <typename K, typename V, typename Allocator = std::allocator<uint8_t>>     // default to standard single byte allocator
+    template <ARTKey K, typename V, typename Allocator = std::allocator<uint8_t>>     // default to standard single byte allocator
     class AdaptiveRadixTree : public Trie<AdaptiveRadixTree<K, V, Allocator>, K, V> {
         friend class Trie<AdaptiveRadixTree, K, V>;
 
     private:
         template <typename NodeType>
-        using NodeAllocator = typename Allocator::template rebind<NodeType>::other;
+        using NodeAllocator = typename std::allocator_traits<Allocator>::template rebind_alloc<NodeType>;
 
         template <typename NodeType, typename... Args>
         NodeType* alloc_node(Args... args) {
@@ -33,7 +34,7 @@ namespace ART {
         template <typename NodeType>
         void free_node(Node *node) {
             NodeType *derivedNode = static_cast<NodeType*>(node);
-            destroy_at(derivedNode);
+            std::destroy_at(derivedNode);
             NodeAllocator<NodeType>().deallocate(derivedNode, 1);
         }
 

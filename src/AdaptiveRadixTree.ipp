@@ -2,12 +2,14 @@
 #include "include/AdaptiveRadixTree.h"
 #endif
 
-template <typename K, typename V, typename Allocator>
-ART::AdaptiveRadixTree<K, V, Allocator>::AdaptiveRadixTree() : rootNode(nullptr) {}
+using namespace ART;
 
-template <typename K, typename V, typename Allocator>
+template <ARTKey K, typename V, typename Allocator>
+AdaptiveRadixTree<K, V, Allocator>::AdaptiveRadixTree() : rootNode(nullptr) {}
+
+template <ARTKey K, typename V, typename Allocator>
 template <typename NodeType, size_t MaxChildren>
-void ART::AdaptiveRadixTree<K, V, Allocator>::free_subtree(Node *node) {
+void AdaptiveRadixTree<K, V, Allocator>::free_subtree(Node *node) {
     if (!node) return;
     NodeType *derivedNode = static_cast<NodeType*>(node);
 
@@ -26,8 +28,8 @@ void ART::AdaptiveRadixTree<K, V, Allocator>::free_subtree(Node *node) {
     free_node<NodeType>(node);   // free current node
 }
 
-template <typename K, typename V, typename Allocator>
-ART::AdaptiveRadixTree<K, V, Allocator>::~AdaptiveRadixTree() {
+template <ARTKey K, typename V, typename Allocator>
+AdaptiveRadixTree<K, V, Allocator>::~AdaptiveRadixTree() {
     if (!rootNode) return;
     switch (rootNode->type) {
         case NODE4: free_subtree<Node4, 4>(rootNode); break;
@@ -39,54 +41,64 @@ ART::AdaptiveRadixTree<K, V, Allocator>::~AdaptiveRadixTree() {
 
 
 // allocate next bigger node, free old memory. fail if already size 256
-template <typename K, typename V, typename Allocator>
-inline void ART::AdaptiveRadixTree<K, V, Allocator>::grow(Node *&node) {
+template <ARTKey K, typename V, typename Allocator>
+inline void AdaptiveRadixTree<K, V, Allocator>::grow(Node *&node) {
+    Node *newNode = nullptr;
     switch (node->type) {
         case NODE4: {
             Node4 *derived4 = static_cast<Node4*>(node);
-            Node16 *newNode = alloc_node<Node16>({
-                .type = NODE16,
-                .numChildren = derived4->numChildren,
-                .prefixLen = derived4->prefixLen,
+            newNode = alloc_node<Node16>(Node16{
+                {
+                    .type = NODE16,
+                    .numChildren = derived4->numChildren,
+                    .prefixLen = derived4->prefixLen
+                },
                 .keys = {0},
                 .children = {nullptr}
             });
+            Node16 *newPtr = static_cast<Node16*>(newNode);
             for (size_t i = 0; i < derived4->numChildren; i++) {
-                newNode->keys[i] = derived4->keys[i];
-                newNode->children[i] = derived4->children[i];
+                newPtr->keys[i] = derived4->keys[i];
+                newPtr->children[i] = derived4->children[i];
             }
             free_node<Node4>(node);
             break;
         }
         case NODE16: {
             Node16 *derived16 = static_cast<Node16*>(node);
-            Node48 *newNode = alloc_node<Node48>({
-                .type = NODE48,
-                .numChildren = derived16->numChildren,
-                .prefixLen = derived16->prefixLen,
+            newNode = alloc_node<Node48>(Node48{
+                {
+                    .type = NODE48,
+                    .numChildren = derived16->numChildren,
+                    .prefixLen = derived16->prefixLen
+                },
                 .indices = {0},
                 .children = {nullptr}
             });
+            Node48 *newPtr = static_cast<Node48*>(newNode);
             for (size_t i = 0; i < derived16->numChildren; i++) {
                 uint8_t byte = derived16->keys[i];
-                newNode->indices[byte] = i + 1;
-                newNode->children[i] = derived16->children[i];
+                newPtr->indices[byte] = i + 1;
+                newPtr->children[i] = derived16->children[i];
             }
             free_node<Node16>(node);
             break;
         }
         case NODE48: {
             Node48 *derived48 = static_cast<Node48*>(node);
-            Node256 *newNode = alloc_node<Node256>({
-                .type = NODE256,
-                .numChildren = derived48->numChildren,
-                .prefixLen = derived48->prefixLen,
+            newNode = alloc_node<Node256>(Node256{
+                {
+                    .type = NODE256,
+                    .numChildren = derived48->numChildren,
+                    .prefixLen = derived48->prefixLen
+                },
                 .children = {nullptr}
             });
+            Node256 *newPtr = static_cast<Node256*>(newNode);
             for (size_t i = 0; i < 256; i++) {
                 uint8_t idx = derived48->indices[i];
                 if (idx) {
-                    newNode->children[i] = derived48->children[idx - 1];
+                    newPtr->children[i] = derived48->children[idx - 1];
                 }
             }
             free_node<Node48>(node);
@@ -95,10 +107,11 @@ inline void ART::AdaptiveRadixTree<K, V, Allocator>::grow(Node *&node) {
         case NODE256:
             throw std::runtime_error("Cannot grow node beyond 256 children");
     }
+    node = newNode;
 }
 
-template <typename K, typename V, typename Allocator>
-inline void ART::AdaptiveRadixTree<K, V, Allocator>::add_child(Node *&parent, uint8_t byte, Node *child) {
+template <ARTKey K, typename V, typename Allocator>
+inline void AdaptiveRadixTree<K, V, Allocator>::add_child(Node *&parent, uint8_t byte, Node *child) {
     if (is_full(parent)) {
         grow(parent);
     }
@@ -134,9 +147,9 @@ inline void ART::AdaptiveRadixTree<K, V, Allocator>::add_child(Node *&parent, ui
 
 // returns the number of matching prefix bytes starting at a given depth
 template <typename K, typename V, typename Allocator>
-inline size_t ART::detail::match_prefix(K &key1, K &key2, size_t depth) {
+inline size_t detail::match_prefix(const K &key1, const K &key2, size_t depth, size_t prefixLen) {
     size_t matchLen = 0;
-    while (matchLen < node->prefixLen && key1[depth + matchLen] == key2[depth + matchLen]) {
+    while (matchLen < prefixLen && key1[depth + matchLen] == key2[depth + matchLen]) {
         matchLen++;
     }
     return matchLen;
@@ -144,21 +157,23 @@ inline size_t ART::detail::match_prefix(K &key1, K &key2, size_t depth) {
 
 
 // need to take in ref to node to restructure tree if needed
-template <typename K, typename V, typename Allocator>
-inline void ART::AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key, Node *leaf, size_t depth) {    
+template <ARTKey K, typename V, typename Allocator>
+inline void AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key, Node *leaf, size_t depth) {    
     if (!node) {
         node = leaf;
         return;
     }
     if (is_leaf(node)) {        // split leaf into new subtree
-        Node *newNode = alloc_node<Node4>({
-            .type = NODE4,
-            .numChildren = 0,
-            .prefixLen = 0
+        Node *newNode = alloc_node<Node4>(Node4{
+            {
+                .type = NODE4,
+                .numChildren = 0,
+                .prefixLen = 0
+            },
             .keys = {0},
             .children = {nullptr}
         });
-        K oldKey = get_leaf_key(node);
+        const K& oldKey = get_leaf_key<K, V>(node);
         for (size_t i = depth; key[i] == oldKey[i] && i < key.size(); i++) {
             newNode->prefixLen++;
         }
@@ -173,16 +188,19 @@ inline void ART::AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key,
     // design choice: need to fetch leaf key at each step to verify path compression
     // => slower write faster read
     Node *leafInSubtree = get_leaf(node);
-    K oldKey = get_leaf_key(leafInSubtree);
-    size_t matchedPrefixLen = detail::match_prefix(key, oldKey, depth);
+    const K& oldKey = get_leaf_key<K, V>(leafInSubtree);
+    size_t matchedPrefixLen = detail::match_prefix(key, oldKey, depth, node->prefixLen);
     if (matchedPrefixLen < node->prefixLen) {
-        Node *newNode = alloc_node<Node4>({
-            .type = NODE4,
-            .numChildren = 0,
-            .prefixLen = matchedPrefixLen,
+        Node *newNode = alloc_node<Node4>(Node4{
+            {
+                .type = NODE4,
+                .numChildren = 0,
+                .prefixLen = (uint16_t)matchedPrefixLen
+            },
             .keys = {0},
             .children = {nullptr}
         });
+
         node->prefixLen = node->prefixLen - (matchedPrefixLen + 1);   // adjust old prefix len
         add_child(newNode, key[depth + matchedPrefixLen], leaf);
         add_child(newNode, oldKey[depth + matchedPrefixLen], node);
@@ -201,21 +219,24 @@ inline void ART::AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key,
 }
 
 
-template <typename K, typename V, typename Allocator>
-void ART::AdaptiveRadixTree<K, V, Allocator>::insert_impl(K &key, V &value) {
-    Leaf *leafNode = alloc_node<Leaf<K, V>>(key, value);
+template <ARTKey K, typename V, typename Allocator>
+void AdaptiveRadixTree<K, V, Allocator>::insert_impl(K &key, V &value) {
+    auto *leafNode = alloc_node<Leaf<K, V>>(Leaf<K, V>{
+        .key = key,
+        .value = value
+    });
     insert(rootNode, key, make_leaf(leafNode), 0);
 }
 
-template <typename K, typename V, typename Allocator>
-void ART::AdaptiveRadixTree<K, V, Allocator>::erase_impl(K &key) {
+template <ARTKey K, typename V, typename Allocator>
+void AdaptiveRadixTree<K, V, Allocator>::erase_impl(K &key) {
     // erase implementation here
 
 }
 
 
 // needs to guarantee that all NON-NULL child_ptr ==> NON-NULL *child_ptr
-inline ART::Node** ART::detail::find_child_ptr(Node *node, uint8_t byte) {
+inline Node** detail::find_child_ptr(Node *node, uint8_t byte) {
     switch (node->type) {
         case NODE4: {
             Node4 *derived4 = static_cast<Node4*>(node);
@@ -257,28 +278,28 @@ inline ART::Node** ART::detail::find_child_ptr(Node *node, uint8_t byte) {
     return nullptr;
 }
 
-template <typename K, typename V, typename Allocator>
-ART::Node* ART::AdaptiveRadixTree<K, V, Allocator>::search(Node *node, K &key, size_t depth) const {
+template <ARTKey K, typename V, typename Allocator>
+Node* AdaptiveRadixTree<K, V, Allocator>::search(Node *node, K &key, size_t depth) const {
     if (!node) return nullptr;
 
     if (is_leaf(node)) {
         auto leaf = get_leaf_addr<K, V>(node);
         if (leaf->key == key) {     // validate path compression
-            return leaf;
+            return reinterpret_cast<Node*>(leaf);
         }
         return nullptr;
     }
     
     depth = depth + node->prefixLen;
-    Node **nextPtr = find_child_ptr(node, key[depth]);
+    Node **nextPtr = detail::find_child_ptr(node, key[depth]);
     if (!nextPtr) {
         return nullptr;
     }
     return search(*nextPtr, key, depth+1);
 }
 
-template <typename K, typename V, typename Allocator>
-V* ART::AdaptiveRadixTree<K, V, Allocator>::at_impl(K &key) const {
+template <ARTKey K, typename V, typename Allocator>
+V* AdaptiveRadixTree<K, V, Allocator>::at_impl(K &key) const {
     if (!rootNode) return nullptr;
 
     // encode key to byte array
@@ -286,7 +307,7 @@ V* ART::AdaptiveRadixTree<K, V, Allocator>::at_impl(K &key) const {
 
     // return value ptr if leaf found
     if (resultNode && is_leaf(resultNode)) {
-        return get_leaf_value<V>(resultNode);
+        return get_leaf_value<K, V>(resultNode);
     }
     return nullptr;
 }
