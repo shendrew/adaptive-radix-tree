@@ -32,5 +32,7 @@ int main() {
     std::cout << "Value for key4: " << *(tree.at_impl(key4)) << std::endl;
     std::cout << "Value for key5: " << *(tree.at_impl(key5)) << std::endl;
 
+    tree.print_info();
+
     return 0;
 }

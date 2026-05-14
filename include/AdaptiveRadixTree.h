@@ -47,10 +47,9 @@ namespace ART {
         }
 
         template <typename NodeType>
-        void free_node(Node *node) {
-            NodeType *derivedNode = reinterpret_cast<NodeType*>(node);
-            std::destroy_at(derivedNode);
-            NodeAllocator<NodeType>().deallocate(derivedNode, 1);
+        void free_node(NodeType *node) {
+            std::destroy_at(node);
+            NodeAllocator<NodeType>().deallocate(node, 1);
         }
 
         template <typename NodeType, size_t MaxChildren>
@@ -60,9 +59,9 @@ namespace ART {
         void insert(Node *&node, K &key, Node *leaf, size_t depth, bool is_update);
 
         inline void grow(Node *&node);
-        void grow_4(Node4 *&node);
-        void grow_16(Node16 *&node);
-        void grow_48(Node48 *&node);
+        void grow_4(Node *&node);
+        void grow_16(Node *&node);
+        void grow_48(Node *&node);
         
         void add_child(Node *&parent, uint8_t byte, Node *child);
 

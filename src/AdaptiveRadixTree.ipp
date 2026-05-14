@@ -25,7 +25,7 @@ void AdaptiveRadixTree<K, V, Allocator>::free_subtree(Node *node) {
         }
     }
     
-    free_node<NodeType>(node);   // free current node
+    free_node<NodeType>(derivedNode);   // free current node
 }
 
 template <ARTKey K, typename V, typename Allocator>
@@ -81,67 +81,71 @@ inline Node** detail::find_child_ptr(Node *node, uint8_t byte) {
         case NODE48: return find_child_48(reinterpret_cast<Node48*>(node), byte);
         case NODE256: return find_child_256(reinterpret_cast<Node256*>(node), byte);
     }
+    return nullptr;
 }
 
 template <ARTKey K, typename V, typename Allocator>
-__attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::grow_4(Node4 *&node) {
+__attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::grow_4(Node *&node) {
+    Node4* derived4 = reinterpret_cast<Node4*>(node);
     Node *newNode = reinterpret_cast<Node*>(alloc_node<Node16>(Node16{
         .header = {
             .type = NODE16,
-            .numChildren = node->header.numChildren,
-            .prefixLen = node->header.prefixLen
+            .numChildren = derived4->header.numChildren,
+            .prefixLen = derived4->header.prefixLen
         },
         .keys = {0},
         .children = {nullptr}
     }));
     Node16 *newPtr = reinterpret_cast<Node16*>(newNode);
-    for (size_t i = 0; i < node->header.numChildren; i++) {
-        newPtr->keys[i] = node->keys[i];
-        newPtr->children[i] = node->children[i];
+    for (size_t i = 0; i < derived4->header.numChildren; i++) {
+        newPtr->keys[i] = derived4->keys[i];
+        newPtr->children[i] = derived4->children[i];
     }
-    free_node<Node4>(node);
+    free_node<Node4>(derived4);
     node = newNode;
 }
 
 template <ARTKey K, typename V, typename Allocator>
-__attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::grow_16(Node16 *&node) {
+__attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::grow_16(Node *&node) {
+    Node16* derived16 = reinterpret_cast<Node16*>(node);
     Node *newNode = reinterpret_cast<Node*>(alloc_node<Node48>(Node48{
         .header = {
             .type = NODE48,
-            .numChildren = node->header.numChildren,
-            .prefixLen = node->header.prefixLen
+            .numChildren = derived16->header.numChildren,
+            .prefixLen = derived16->header.prefixLen
         },
         .indices = {0},
         .children = {nullptr}
     }));
     Node48 *newPtr = reinterpret_cast<Node48*>(newNode);
-    for (size_t i = 0; i < node->header.numChildren; i++) {
-        uint8_t byte = node->keys[i];
+    for (size_t i = 0; i < derived16->header.numChildren; i++) {
+        uint8_t byte = derived16->keys[i];
         newPtr->indices[byte] = i + 1;
-        newPtr->children[i] = node->children[i];
+        newPtr->children[i] = derived16->children[i];
     }
-    free_node<Node16>(node);
+    free_node<Node16>(derived16);
     node = newNode;
 }
 
 template <ARTKey K, typename V, typename Allocator>
-__attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::grow_48(Node48 *&node) {
+__attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::grow_48(Node *&node) {
+    Node48* derived48 = reinterpret_cast<Node48*>(node);
    Node *newNode = reinterpret_cast<Node*>(alloc_node<Node256>(Node256{
         .header = {
             .type = NODE256,
-            .numChildren = node->header.numChildren,
-            .prefixLen = node->header.prefixLen
+            .numChildren = derived48->header.numChildren,
+            .prefixLen = derived48->header.prefixLen
         },
         .children = {nullptr}
     }));
     Node256 *newPtr = reinterpret_cast<Node256*>(newNode);
     for (size_t i = 0; i < 256; i++) {
-        uint8_t idx = node->indices[i];
+        uint8_t idx = derived48->indices[i];
         if (idx) {
-            newPtr->children[i] = node->children[idx - 1];
+            newPtr->children[i] = derived48->children[idx - 1];
         }
     }
-    free_node<Node48>(node);
+    free_node<Node48>(derived48);
     node = newNode;
 }
 
@@ -149,9 +153,9 @@ __attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::grow_48(Node4
 template <ARTKey K, typename V, typename Allocator>
 inline void AdaptiveRadixTree<K, V, Allocator>::grow(Node *&node) {
     switch (node->type) {
-        case NODE4: {grow_4(reinterpret_cast<Node4*&>(node)); return;}
-        case NODE16: {grow_16(reinterpret_cast<Node16*&>(node)); return;}
-        case NODE48: {grow_48(reinterpret_cast<Node48*&>(node)); return;}
+        case NODE4: {grow_4(node); return;}
+        case NODE16: {grow_16(node); return;}
+        case NODE48: {grow_48(node); return;}
         case NODE256: throw std::runtime_error("Cannot grow node beyond 256 children");
     }
 }
@@ -248,7 +252,7 @@ void AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key, Node *leaf,
         // check for inplace update
         if (oldKey == key) {
             if (is_update) {
-                get_leaf_value<K, V>(node) = get_leaf_value<K, V>(leaf);
+                *(get_leaf_value<K, V>(node)) = *(get_leaf_value<K, V>(leaf));
             }
             free_node<Leaf<K, V>>(get_leaf_addr<K, V>(node));
             return;     // ignore if not update
@@ -405,14 +409,14 @@ void AdaptiveRadixTree<K, V, Allocator>::print_info() const {
 
     size_t total_nodes = stats.node4_count + stats.node16_count + stats.node48_count + stats.node256_count;
 
-    std::cout << std::format("\n=== Adaptive Radix Tree Info ===\n");
+    std::cout << std::format("\n==== Adaptive Radix Tree Info ====\n");
     std::cout << std::format("Node counts:\n");
+    std::cout << std::format("  Leaf nodes: {}\n", stats.leaf_count);
     std::cout << std::format("  NODE4:  {}\n", stats.node4_count);
     std::cout << std::format("  NODE16: {}\n", stats.node16_count);
     std::cout << std::format("  NODE48: {}\n", stats.node48_count);
     std::cout << std::format("  NODE256: {}\n", stats.node256_count);
     std::cout << std::format("  Total internal nodes: {}\n", total_nodes);
-    std::cout << std::format("  Leaf nodes: {}\n", stats.leaf_count);
 
     if (!stats.depths.empty()) {
         // Calculate mean
@@ -431,8 +435,8 @@ void AdaptiveRadixTree<K, V, Allocator>::print_info() const {
         double stddev = std::sqrt(variance);
 
         std::cout << std::format("\nLeaf depth statistics:\n");
-        std::cout << std::format("    Mean depth: {}\n", mean);
-        std::cout << std::format("    Std deviation: {}\n", stddev);
+        std::cout << std::format("  Mean depth: {}\n", mean);
+        std::cout << std::format("  Std deviation: {}\n", stddev);
     }
-    std::cout << std::format("================================\n\n");
+    std::cout << std::format("==================================\n\n");
 }
