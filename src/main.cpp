@@ -32,6 +32,9 @@ int main() {
     std::cout << "Value for key4: " << *(tree.at(key4)) << std::endl;
     std::cout << "Value for key5: " << *(tree.at(key5)) << std::endl;
 
+    tree.erase(key1);
+    tree.erase(key2);
+    tree.erase(key3);
     tree.erase(key4);
     tree.erase(key5);
 

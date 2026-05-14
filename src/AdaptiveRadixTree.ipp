@@ -514,7 +514,9 @@ inline void AdaptiveRadixTree<K, V, Allocator>::update(K &key, V &value) {
 
 template <ARTKey K, typename V, typename Allocator>
 inline void AdaptiveRadixTree<K, V, Allocator>::erase(K &key) {
-    erase_impl(rootNode, key, 0);
+    if (erase_impl(rootNode, key, 0)) {
+        rootNode = nullptr;
+    }
 }
 
 template <ARTKey K, typename V, typename Allocator>
