@@ -15,6 +15,10 @@ public:
         underlying().insert_impl(key, value);
     }
 
+    void update(K& key, V& value) {
+        underlying().update_impl(key, value);
+    }
+
     void erase(K& key) {
         underlying().erase_impl(key);
     }

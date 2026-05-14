@@ -47,7 +47,7 @@ namespace ART {
         void free_subtree(Node *node);
 
         Node* search(Node *node, K &key, size_t depth) const;
-        void insert(Node *&node, K &key, Node *leaf, size_t depth);
+        void insert(Node *&node, K &key, Node *leaf, size_t depth, bool is_update);
 
         inline void grow(Node *&node);
         void grow_4(Node4 *&node);
@@ -64,6 +64,7 @@ namespace ART {
         ~AdaptiveRadixTree();
 
         inline void insert_impl(K& key, V& value);
+        inline void update_impl(K& key, V& value);
         inline void erase_impl(K& key);
         inline V* at_impl(K& key) const;
     };

@@ -220,7 +220,7 @@ Node* AdaptiveRadixTree<K, V, Allocator>::search(Node *node, K &key, size_t dept
 
 // need to take in ref to node to restructure tree if needed
 template <ARTKey K, typename V, typename Allocator>
-void AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key, Node *leaf, size_t depth) {    
+void AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key, Node *leaf, size_t depth, bool is_update) {    
     // CASE 1: empty slot, insert leaf here
     if (!node) {
         node = leaf;
@@ -240,6 +240,15 @@ void AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key, Node *leaf,
             .children = {nullptr}
         }));
         const K& oldKey = get_leaf_key<K, V>(node);
+
+        // check for inplace update
+        if (oldKey == key) {
+            if (is_update) {
+                get_leaf_value<K, V>(node) = get_leaf_value<K, V>(leaf);
+            }
+            free_node<Leaf<K, V>>(get_leaf_addr<K, V>(node));
+            return;     // ignore if not update
+        }
 
         // determine prefix split length
         for (size_t i = depth; i < key.size() && key[i] == oldKey[i]; i++) {
@@ -280,7 +289,7 @@ void AdaptiveRadixTree<K, V, Allocator>::insert(Node *&node, K &key, Node *leaf,
     depth = depth + node->prefixLen;
     Node **nextPtr = detail::find_child_ptr(node, key[depth]);
     if (nextPtr) {
-        insert(*nextPtr, key, leaf, depth+1);
+        insert(*nextPtr, key, leaf, depth+1, is_update);
     } else {
         // CASE 5: no matching child, insert leaf here
         // guaranteed to have space since at most 256 diff byte values
@@ -295,7 +304,16 @@ inline void AdaptiveRadixTree<K, V, Allocator>::insert_impl(K &key, V &value) {
         .key = key,
         .value = value
     });
-    insert(rootNode, key, make_leaf(leafNode), 0);
+    insert(rootNode, key, make_leaf(leafNode), 0, false);
+}
+
+template <ARTKey K, typename V, typename Allocator>
+inline void AdaptiveRadixTree<K, V, Allocator>::update_impl(K &key, V &value) {
+    auto *leafNode = alloc_node<Leaf<K, V>>(Leaf<K, V>{
+        .key = key,
+        .value = value
+    });
+    insert(rootNode, key, make_leaf(leafNode), 0, true);
 }
 
 template <ARTKey K, typename V, typename Allocator>
