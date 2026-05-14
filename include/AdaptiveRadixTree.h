@@ -11,6 +11,10 @@ namespace ART {
 
     namespace detail {
         inline Node** find_child_ptr(Node *node, uint8_t byte);
+        Node** find_child_4(Node4 *node, uint8_t byte);
+        Node** find_child_16(Node16 *node, uint8_t byte);
+        Node** find_child_48(Node48 *node, uint8_t byte);
+        Node** find_child_256(Node256 *node, uint8_t byte);
 
         template <ARTKey K>
         inline size_t match_prefix(const K &key1, const K &key2, size_t depth, size_t prefixLen);
@@ -43,9 +47,14 @@ namespace ART {
         void free_subtree(Node *node);
 
         Node* search(Node *node, K &key, size_t depth) const;
-        inline void add_child(Node *&parent, uint8_t byte, Node *child);
+        void insert(Node *&node, K &key, Node *leaf, size_t depth);
+
         inline void grow(Node *&node);
-        inline void insert(Node *&node, K &key, Node *leaf, size_t depth);
+        void grow_4(Node4 *&node);
+        void grow_16(Node16 *&node);
+        void grow_48(Node48 *&node);
+        
+        void add_child(Node *&parent, uint8_t byte, Node *child);
 
         // private members
         Node* rootNode;
@@ -54,9 +63,9 @@ namespace ART {
         AdaptiveRadixTree();
         ~AdaptiveRadixTree();
 
-        void insert_impl(K& key, V& value);
-        void erase_impl(K& key);
-        V* at_impl(K& key) const;
+        inline void insert_impl(K& key, V& value);
+        inline void erase_impl(K& key);
+        inline V* at_impl(K& key) const;
     };
 }
 
