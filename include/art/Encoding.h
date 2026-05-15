@@ -34,6 +34,8 @@ struct alignas(64) Encoding {
         }
     }
 
+    constexpr Encoding() = default;  // alloc zero init with {}
+    
     template <typename... Args>
     constexpr explicit Encoding(Args... args) {
         pack(0,args...);

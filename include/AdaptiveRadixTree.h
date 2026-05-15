@@ -9,17 +9,6 @@
 
 namespace ART {
 
-    namespace detail {
-        inline Node** find_child_ptr(Node *node, uint8_t byte);
-        Node** find_child_4(Node4 *node, uint8_t byte);
-        Node** find_child_16(Node16 *node, uint8_t byte);
-        Node** find_child_48(Node48 *node, uint8_t byte);
-        Node** find_child_256(Node256 *node, uint8_t byte);
-
-        template <ARTKey K>
-        inline size_t match_prefix(const K &key1, const K &key2, size_t depth, size_t prefixLen);
-    }
-
     struct TreeStats {
         size_t node4_count = 0;
         size_t node16_count = 0;
@@ -50,33 +39,43 @@ namespace ART {
         }
 
         template <typename NodeType, size_t MaxChildren>
-        void free_subtree(Node *node);
+        void free_subtree(Node<K> *node);
 
-        Node* search(Node *node, K &key, size_t depth) const;
-        void insert_impl(Node *&node, K &key, Node *leaf, size_t depth, bool is_update);
-        bool erase_impl(Node *&node, K &key, size_t depth);
+        // getters
+        static inline Node<K>** find_child_ptr(Node<K> *node, uint8_t byte);
+        static Node<K>** find_child_4(Node4<K> *node, uint8_t byte);
+        static Node<K>** find_child_16(Node16<K> *node, uint8_t byte);
+        static Node<K>** find_child_48(Node48<K> *node, uint8_t byte);
+        static Node<K>** find_child_256(Node256<K> *node, uint8_t byte);
 
-        inline void grow(Node *&node);
-        void grow_4(Node *&node);
-        void grow_16(Node *&node);
-        void grow_48(Node *&node);
+        static inline size_t match_prefix(Node<K> *node, const K &key, size_t depth);
 
-        void shrink_4(Node *&node);
-        void shrink_16(Node *&node);
-        void shrink_48(Node *&node);
-        void shrink_256(Node *&node);
+        // core modification helpers
+        Node<K>* search(Node<K> *node, K &key, size_t depth) const;
+        void insert_impl(Node<K> *&node, K &key, Node<K> *leaf, size_t depth, bool is_update);
+        bool erase_impl(Node<K> *&node, K &key, size_t depth);
 
-        void add_child(Node *&parent, uint8_t byte, Node *child);
-        inline void remove_child(Node *&parent, uint8_t byte);
-        void remove_child_4(Node *&parent, uint8_t byte);
-        void remove_child_16(Node *&parent, uint8_t byte);
-        void remove_child_48(Node *&parent, uint8_t byte);
-        void remove_child_256(Node *&parent, uint8_t byte);
+        inline void grow(Node<K> *&node);
+        void grow_4(Node<K> *&node);
+        void grow_16(Node<K> *&node);
+        void grow_48(Node<K> *&node);
 
-        void collect_stats(Node *node, size_t depth, TreeStats &stats) const;
+        void shrink_4(Node<K> *&node);
+        void shrink_16(Node<K> *&node);
+        void shrink_48(Node<K> *&node);
+        void shrink_256(Node<K> *&node);
+
+        void add_child(Node<K> *&parent, uint8_t byte, Node<K> *child);
+        inline void remove_child(Node<K> *&parent, uint8_t byte);
+        void remove_child_4(Node<K> *&parent, uint8_t byte);
+        void remove_child_16(Node<K> *&parent, uint8_t byte);
+        void remove_child_48(Node<K> *&parent, uint8_t byte);
+        void remove_child_256(Node<K> *&parent, uint8_t byte);
+
+        void collect_stats(Node<K> *node, size_t depth, TreeStats &stats) const;
 
         // private members
-        Node* rootNode;
+        Node<K>* rootNode;
 
     public:
         AdaptiveRadixTree();
