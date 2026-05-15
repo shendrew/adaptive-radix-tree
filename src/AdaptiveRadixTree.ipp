@@ -203,11 +203,32 @@ void AdaptiveRadixTree<K, V, Allocator>::add_child(Node<K> *&parent, uint8_t byt
     parent->numChildren++;
 }
 
-// promote node to be pointed directly by grandparent
+// promote the single remaining child to merge with parent
 template <ARTKey K, typename V, typename Allocator>
 void AdaptiveRadixTree<K, V, Allocator>::shrink_4(Node<K> *&node) {
     Node4<K>* derived4 = reinterpret_cast<Node4<K>*>(node);
-    Node<K> *newNode = get_leaf(node);
+
+    // find remaining chlid
+    Node<K> *newNode = nullptr;
+    uint8_t branchingByte = 0;
+    for (size_t i = 0; i < 4; i++) {
+        if (derived4->children[i]) {
+            newNode = derived4->children[i];
+            branchingByte = derived4->keys[i];
+            break;
+        }
+    }
+    
+    // merge derived4 parent prefix + branching byte + child prefix
+    K mergedPrefix = derived4->prefix;
+    reinterpret_cast<uint8_t*>(&mergedPrefix)[derived4->prefixLen] = branchingByte;
+    std::memcpy(reinterpret_cast<uint8_t*>(&mergedPrefix) + derived4->prefixLen + 1,
+                reinterpret_cast<uint8_t*>(&newNode->prefix),
+                newNode->prefixLen);
+    
+    newNode->prefix = mergedPrefix;
+    newNode->prefixLen = derived4->prefixLen + 1 + newNode->prefixLen;
+    
     free_node<Node4<K>>(derived4);
     node = newNode;
 }
