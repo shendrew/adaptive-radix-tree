@@ -250,6 +250,13 @@ void AdaptiveRadixTree<K, V, Allocator>::shrink_4(Node<K> *&node) {
             break;
         }
     }
+
+    // merge directly if leaf, no prefix modification
+    if (is_leaf(newNode)) {
+        free_node<Node4<K>>(derived4);
+        node = newNode;
+        return;
+    }
     
     // merge derived4 parent prefix + branching byte + child prefix
     K mergedPrefix = derived4->header.prefix;
