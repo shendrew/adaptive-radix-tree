@@ -4,13 +4,12 @@
 #include <cstddef>
 
 namespace ART {
-    // node types
-    static constexpr uint8_t NODE4 = 1;
-    static constexpr uint8_t NODE16 = 2;
-    static constexpr uint8_t NODE48 = 3;
-    static constexpr uint8_t NODE256 = 4;
+    // node types (reserve lower 3 bits for type)
+    static constexpr uintptr_t NODE4 = 0x01ull;
+    static constexpr uintptr_t NODE16 = 0x02ull;
+    static constexpr uintptr_t NODE48 = 0x03ull;
+    static constexpr uintptr_t NODE256 = 0x04ull;
 
-    // Maximum prefix length (uint16_t bound)
     static constexpr uint16_t MAX_PREFIX_LEN = UINT16_MAX;
 
     // should only support byte index addressable keys
@@ -24,10 +23,9 @@ namespace ART {
     ;
 
     // align nodes to 64 bytes for better cache performance
-    // Template parameter K is the key type
+    // 6 lower bits for tags
     template <ARTKey K>
     struct alignas(64) Node {
-        uint8_t type;
         uint8_t numChildren;
         uint16_t prefixLen;
         K prefix;  // store full prefix; filled from index 0, rest is unused
@@ -41,11 +39,12 @@ namespace ART {
         Node<K> *children[4];
     };
 
-    // same as Node4
+    // same layout as Node4
+    // alignas(16) for key to use SSE (128 bits) simd
     template <ARTKey K>
     struct Node16 {
         Node<K> header;
-        uint8_t keys[16];
+        alignas(16) uint8_t keys[16];
         Node<K> *children[16];
     };
 
@@ -65,17 +64,53 @@ namespace ART {
         Node<K> *children[256];
     };
 
+    // mask the lower 3 bits
+    template <ARTKey K>
+    inline uintptr_t get_type(Node<K> *node) {
+        return reinterpret_cast<uintptr_t>(node) & 0B0111ull;
+    }
 
-    
+    // strips tags
+    template <ARTKey K>
+    inline Node<K>* get_node(Node<K> *node) {
+        return reinterpret_cast<Node<K>*>(reinterpret_cast<uintptr_t>(node) & ~0B0011'1111ull);
+    }
+
+    // strips tags and casts
+    template <typename T, ARTKey K>
+    requires std::is_pointer_v<T>
+    inline T get_node(Node<K> *node) {
+        return reinterpret_cast<T>(get_node<K>(node));
+    }
+
+    template <ARTKey K>
+    inline Node<K>* tag_node(Node<K>* node, uintptr_t tag) {
+        return reinterpret_cast<Node<K>*>(reinterpret_cast<uintptr_t>(node) | tag);
+    }
+
     template <ARTKey K>
     inline bool is_full(Node<K> *node) {
-        switch (node->type) {
-            case NODE4: return node->numChildren == 4;
-            case NODE16: return node->numChildren == 16;
-            case NODE48: return node->numChildren == 48;
-            case NODE256: return node->numChildren == 256;
-            default: return false;
+        Node<K>* nodePtr = get_node(node);
+        switch (get_type(node)) {
+            case NODE4: return nodePtr->numChildren == 4;
+            case NODE16: return nodePtr->numChildren == 16;
+            case NODE48: return nodePtr->numChildren == 48;
+            case NODE256: return nodePtr->numChildren == 256;
+            case NODE_LEAF: throw std::runtime_error("Leaf nodes should not be grown");
+            default: throw std::runtime_error("Invalid node type");
         }
     }
 
+    template <ARTKey K>
+    inline bool is_small(Node<K> *node) {
+        Node<K>* nodePtr = get_node(node);
+        switch (get_type(node)) {
+            case NODE4: return nodePtr->numChildren <= 1;
+            case NODE16: return nodePtr->numChildren <= 3;
+            case NODE48: return nodePtr->numChildren <= 12;
+            case NODE256: return nodePtr->numChildren <= 32;
+            case NODE_LEAF: throw std::runtime_error("Leaf nodes should not be shrunk");
+            default: throw std::runtime_error("Invalid node type");
+        }
+    }
 }

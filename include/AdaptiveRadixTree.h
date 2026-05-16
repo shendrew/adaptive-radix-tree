@@ -48,7 +48,7 @@ namespace ART {
         static Node<K>** find_child_48(Node48<K> *node, uint8_t byte);
         static Node<K>** find_child_256(Node256<K> *node, uint8_t byte);
 
-        static inline size_t match_prefix(Node<K> *node, const K &key, size_t depth);
+        static inline size_t match_prefix(const Node<K> *node, const K &key, size_t depth);
 
         // core modification helpers
         Node<K>* search(Node<K> *node, K &key, size_t depth) const;
@@ -60,22 +60,23 @@ namespace ART {
         void grow_16(Node<K> *&node);
         void grow_48(Node<K> *&node);
 
+        inline void shrink(Node<K> *&node);
         void shrink_4(Node<K> *&node);
         void shrink_16(Node<K> *&node);
         void shrink_48(Node<K> *&node);
         void shrink_256(Node<K> *&node);
 
         inline void add_child(Node<K> *&parent, uint8_t byte, Node<K> *child);
-        void add_child_4(Node<K> *&parent, uint8_t byte, Node<K> *child);
-        void add_child_16(Node<K> *&parent, uint8_t byte, Node<K> *child);
-        void add_child_48(Node<K> *&parent, uint8_t byte, Node<K> *child);
-        void add_child_256(Node<K> *&parent, uint8_t byte, Node<K> *child);
+        void add_child_4(Node4<K> *parent, uint8_t byte, Node<K> *child);
+        void add_child_16(Node16<K> *parent, uint8_t byte, Node<K> *child);
+        void add_child_48(Node48<K> *parent, uint8_t byte, Node<K> *child);
+        void add_child_256(Node256<K> *parent, uint8_t byte, Node<K> *child);
 
         inline void remove_child(Node<K> *&parent, uint8_t byte);
-        void remove_child_4(Node<K> *&parent, uint8_t byte);
-        void remove_child_16(Node<K> *&parent, uint8_t byte);
-        void remove_child_48(Node<K> *&parent, uint8_t byte);
-        void remove_child_256(Node<K> *&parent, uint8_t byte);
+        void remove_child_4(Node4<K> *parent, uint8_t byte);
+        void remove_child_16(Node16<K> *parent, uint8_t byte);
+        void remove_child_48(Node48<K> *parent, uint8_t byte);
+        void remove_child_256(Node256<K> *parent, uint8_t byte);
 
         void collect_stats(Node<K> *node, size_t depth, TreeStats &stats) const;
 
