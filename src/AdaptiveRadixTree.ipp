@@ -484,7 +484,7 @@ void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, K &key, Nod
             if (is_update) {
                 *(get_leaf_value<K, V>(node)) = *(get_leaf_value<K, V>(leaf));
             }
-            free_node<Leaf<K, V>>(get_leaf_addr<K, V>(node));
+            free_node<Leaf<K, V>>(get_leaf_addr<K, V>(leaf));
             return;     // ignore if not update
         }
 
