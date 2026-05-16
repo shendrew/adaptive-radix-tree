@@ -365,6 +365,10 @@ void AdaptiveRadixTree<K, V, Allocator>::remove_child_4(Node<K> *&parent, uint8_
         }
     }
 
+    // zero out remaining child ptrs
+    std::memset(&derived4->keys[derived4->header.numChildren], 0, (4 - derived4->header.numChildren) * sizeof(uint8_t));
+    std::memset(&derived4->children[derived4->header.numChildren], 0, (4 - derived4->header.numChildren) * sizeof(Node<K>*));
+
     // invariant: node 4 has at least 2 children, so removal wont cause 0 child case
     if (derived4->header.numChildren == 1) { // collapse to leaf directly
         shrink_4(parent);
@@ -385,6 +389,10 @@ void AdaptiveRadixTree<K, V, Allocator>::remove_child_16(Node<K> *&parent, uint8
         }
     }
 
+    // zero out remaining child ptrs
+    std::memset(&derived16->keys[derived16->header.numChildren], 0, (16 - derived16->header.numChildren) * sizeof(uint8_t));
+    std::memset(&derived16->children[derived16->header.numChildren], 0, (16 - derived16->header.numChildren) * sizeof(Node<K>*));
+
     if (derived16->header.numChildren == 3) {      // headroom to reduce thashing
         shrink_16(parent);
     }
@@ -400,6 +408,8 @@ void AdaptiveRadixTree<K, V, Allocator>::remove_child_48(Node<K> *&parent, uint8
         derived48->indices[byte] = 0;
         derived48->header.numChildren--;
     }
+
+    // TODO compact remaining children to left
 
     if (derived48->header.numChildren == 12) {
         shrink_48(parent);
