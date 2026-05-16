@@ -65,7 +65,12 @@ namespace ART {
         void shrink_48(Node<K> *&node);
         void shrink_256(Node<K> *&node);
 
-        void add_child(Node<K> *&parent, uint8_t byte, Node<K> *child);
+        inline void add_child(Node<K> *&parent, uint8_t byte, Node<K> *child);
+        void add_child_4(Node<K> *&parent, uint8_t byte, Node<K> *child);
+        void add_child_16(Node<K> *&parent, uint8_t byte, Node<K> *child);
+        void add_child_48(Node<K> *&parent, uint8_t byte, Node<K> *child);
+        void add_child_256(Node<K> *&parent, uint8_t byte, Node<K> *child);
+
         inline void remove_child(Node<K> *&parent, uint8_t byte);
         void remove_child_4(Node<K> *&parent, uint8_t byte);
         void remove_child_16(Node<K> *&parent, uint8_t byte);

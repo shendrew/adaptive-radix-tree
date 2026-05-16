@@ -170,37 +170,69 @@ inline void AdaptiveRadixTree<K, V, Allocator>::grow(Node<K> *&node) {
 }
 
 template <ARTKey K, typename V, typename Allocator>
+__attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::add_child_4(Node<K> *&parent, uint8_t byte, Node<K> *child) {
+    Node4<K> *derived4 = reinterpret_cast<Node4<K>*>(parent);
+    
+    // find insert pos and make room
+    size_t pos = 0;
+    while (pos < derived4->header.numChildren && derived4->keys[pos] < byte) {
+        pos++;
+    }
+    for (size_t i = derived4->header.numChildren; i > pos; i--) {
+        derived4->keys[i] = derived4->keys[i - 1];
+        derived4->children[i] = derived4->children[i - 1];
+    }
+
+    derived4->keys[pos] = byte;
+    derived4->children[pos] = child;
+    derived4->header.numChildren++;
+}
+
+// optimize with simd later to find pos
+template <ARTKey K, typename V, typename Allocator>
+__attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::add_child_16(Node<K> *&parent, uint8_t byte, Node<K> *child) {
+    Node16<K> *derived16 = reinterpret_cast<Node16<K>*>(parent);
+    
+    size_t pos = 0;
+    while (pos < derived16->header.numChildren && derived16->keys[pos] < byte) {
+        pos++;
+    }
+    for (size_t i = derived16->header.numChildren; i > pos; i--) {
+        derived16->keys[i] = derived16->keys[i - 1];
+        derived16->children[i] = derived16->children[i - 1];
+    }
+
+    derived16->keys[pos] = byte;
+    derived16->children[pos] = child;
+    derived16->header.numChildren++;
+}
+
+template <ARTKey K, typename V, typename Allocator>
+__attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::add_child_48(Node<K> *&parent, uint8_t byte, Node<K> *child) {
+    Node48<K> *derived48 = reinterpret_cast<Node48<K>*>(parent);
+    derived48->indices[byte] = derived48->header.numChildren + 1;
+    derived48->children[derived48->header.numChildren] = child;
+    derived48->header.numChildren++;
+}
+
+template <ARTKey K, typename V, typename Allocator>
+__attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::add_child_256(Node<K> *&parent, uint8_t byte, Node<K> *child) {
+    Node256<K> *derived256 = reinterpret_cast<Node256<K>*>(parent);
+    derived256->children[byte] = child;
+    derived256->header.numChildren++;
+}
+
+template <ARTKey K, typename V, typename Allocator>
 void AdaptiveRadixTree<K, V, Allocator>::add_child(Node<K> *&parent, uint8_t byte, Node<K> *child) {
     if (is_full(parent)) {
         grow(parent);
     }
-    
     switch (parent->type) {
-        case NODE4: {
-            Node4<K> *derived4 = reinterpret_cast<Node4<K>*>(parent);
-            derived4->keys[derived4->header.numChildren] = byte;
-            derived4->children[derived4->header.numChildren] = child;
-            break;
-        }
-        case NODE16: {  // optimize with SIMD in future
-            Node16<K> *derived16 = reinterpret_cast<Node16<K>*>(parent);
-            derived16->keys[derived16->header.numChildren] = byte;
-            derived16->children[derived16->header.numChildren] = child;
-            break;
-        }
-        case NODE48: {
-            Node48<K> *derived48 = reinterpret_cast<Node48<K>*>(parent);
-            derived48->indices[byte] = derived48->header.numChildren + 1;
-            derived48->children[derived48->header.numChildren] = child;
-            break;
-        }
-        case NODE256: {
-            Node256<K> *derived256 = reinterpret_cast<Node256<K>*>(parent);
-            derived256->children[byte] = child;
-            break;
-        }
+        case NODE4: add_child_4(parent, byte, child); break;
+        case NODE16: add_child_16(parent, byte, child); break;
+        case NODE48: add_child_48(parent, byte, child); break;
+        case NODE256: add_child_256(parent, byte, child); break;
     }
-    parent->numChildren++;
 }
 
 // promote the single remaining child to merge with parent
@@ -220,14 +252,14 @@ void AdaptiveRadixTree<K, V, Allocator>::shrink_4(Node<K> *&node) {
     }
     
     // merge derived4 parent prefix + branching byte + child prefix
-    K mergedPrefix = derived4->prefix;
-    reinterpret_cast<uint8_t*>(&mergedPrefix)[derived4->prefixLen] = branchingByte;
-    std::memcpy(reinterpret_cast<uint8_t*>(&mergedPrefix) + derived4->prefixLen + 1,
+    K mergedPrefix = derived4->header.prefix;
+    reinterpret_cast<uint8_t*>(&mergedPrefix)[derived4->header.prefixLen] = branchingByte;
+    std::memcpy(reinterpret_cast<uint8_t*>(&mergedPrefix) + derived4->header.prefixLen + 1,
                 reinterpret_cast<uint8_t*>(&newNode->prefix),
                 newNode->prefixLen);
     
     newNode->prefix = mergedPrefix;
-    newNode->prefixLen = derived4->prefixLen + 1 + newNode->prefixLen;
+    newNode->prefixLen = derived4->header.prefixLen + 1 + newNode->prefixLen;
     
     free_node<Node4<K>>(derived4);
     node = newNode;
