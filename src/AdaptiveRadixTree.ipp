@@ -180,9 +180,10 @@ __attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::add_child_4(N
     while (pos < parent->header.numChildren && parent->keys[pos] < byte) {
         pos++;
     }
-    for (size_t i = parent->header.numChildren; i > pos; i--) {
-        parent->keys[i] = parent->keys[i - 1];
-        parent->children[i] = parent->children[i - 1];
+    size_t shiftCnt = parent->header.numChildren - pos;
+    if (shiftCnt > 0) {
+        std::memmove(&parent->keys[pos+1], &parent->keys[pos], shiftCnt * sizeof(uint8_t));
+        std::memmove(&parent->children[pos+1], &parent->children[pos], shiftCnt * sizeof(Node<K>*));
     }
 
     parent->keys[pos] = byte;
@@ -197,9 +198,10 @@ __attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::add_child_16(
     while (pos < parent->header.numChildren && parent->keys[pos] < byte) {
         pos++;
     }
-    for (size_t i = parent->header.numChildren; i > pos; i--) {
-        parent->keys[i] = parent->keys[i - 1];
-        parent->children[i] = parent->children[i - 1];
+    size_t shiftCnt = parent->header.numChildren - pos;
+    if (shiftCnt > 0) {
+        std::memmove(&parent->keys[pos+1], &parent->keys[pos], shiftCnt * sizeof(uint8_t));
+        std::memmove(&parent->children[pos+1], &parent->children[pos], shiftCnt * sizeof(Node<K>*));
     }
 
     parent->keys[pos] = byte;
@@ -209,8 +211,12 @@ __attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::add_child_16(
 
 template <ARTKey K, typename V, typename Allocator>
 __attribute__((noinline)) void AdaptiveRadixTree<K, V, Allocator>::add_child_48(Node48<K> *parent, uint8_t byte, Node<K> *child) {
-    parent->indices[byte] = parent->header.numChildren + 1;
-    parent->children[parent->header.numChildren] = child;
+    size_t idx = 0;
+    while (idx < 48 && parent->children[idx] != nullptr) {
+        idx++;
+    }
+    parent->indices[byte] = idx + 1;
+    parent->children[idx] = child;
     parent->header.numChildren++;
 }
 
@@ -366,8 +372,11 @@ void AdaptiveRadixTree<K, V, Allocator>::remove_child_4(Node4<K> *parent, uint8_
     for (size_t i = 0; i < parent->header.numChildren; i++) {
         if (parent->keys[i] == byte) {
             // shift remaining children left by 1
-            std::memmove(&parent->keys[i], &parent->keys[i+1], (parent->header.numChildren-i-1) * sizeof(uint8_t));
-            std::memmove(&parent->children[i], &parent->children[i+1], (parent->header.numChildren-i-1) * sizeof(Node<K>*));
+            size_t shiftCnt = parent->header.numChildren - i - 1;
+            if (shiftCnt > 0) {
+                std::memmove(&parent->keys[i], &parent->keys[i+1], shiftCnt * sizeof(uint8_t));
+                std::memmove(&parent->children[i], &parent->children[i+1], shiftCnt * sizeof(Node<K>*));
+            }
             
             parent->header.numChildren--;
             break;
@@ -375,8 +384,11 @@ void AdaptiveRadixTree<K, V, Allocator>::remove_child_4(Node4<K> *parent, uint8_
     }
 
     // zero out remaining child ptrs
-    std::memset(&parent->keys[parent->header.numChildren], 0, (4 - parent->header.numChildren) * sizeof(uint8_t));
-    std::memset(&parent->children[parent->header.numChildren], 0, (4 - parent->header.numChildren) * sizeof(Node<K>*));
+    if (parent->header.numChildren < 4) {
+        size_t shiftCnt = 4 - parent->header.numChildren;
+        std::memset(&parent->keys[parent->header.numChildren], 0, shiftCnt * sizeof(uint8_t));
+        std::memset(&parent->children[parent->header.numChildren], 0, shiftCnt * sizeof(Node<K>*));
+    }
 }
 
 template <ARTKey K, typename V, typename Allocator>
@@ -384,17 +396,23 @@ void AdaptiveRadixTree<K, V, Allocator>::remove_child_16(Node16<K> *parent, uint
     for (size_t i = 0; i < parent->header.numChildren; i++) {
         if (parent->keys[i] == byte) {
             // shift remaining children left by 1
-            std::memmove(&parent->keys[i], &parent->keys[i+1], (parent->header.numChildren-i-1) * sizeof(uint8_t));
-            std::memmove(&parent->children[i], &parent->children[i+1], (parent->header.numChildren-i-1) * sizeof(Node<K>*));
-            
+            size_t shiftCnt = parent->header.numChildren - i - 1;
+            if (shiftCnt > 0) {
+                std::memmove(&parent->keys[i], &parent->keys[i+1], shiftCnt * sizeof(uint8_t));
+                std::memmove(&parent->children[i], &parent->children[i+1], shiftCnt * sizeof(Node<K>*));
+            }
+
             parent->header.numChildren--;
             break;
         }
     }
 
     // zero out remaining child ptrs
-    std::memset(&parent->keys[parent->header.numChildren], 0, (16 - parent->header.numChildren) * sizeof(uint8_t));
-    std::memset(&parent->children[parent->header.numChildren], 0, (16 - parent->header.numChildren) * sizeof(Node<K>*));
+    if (parent->header.numChildren < 16) {
+        size_t shiftCnt = 16 - parent->header.numChildren;
+        std::memset(&parent->keys[parent->header.numChildren], 0, shiftCnt * sizeof(uint8_t));
+        std::memset(&parent->children[parent->header.numChildren], 0, shiftCnt * sizeof(Node<K>*));
+    }
 }
 
 template <ARTKey K, typename V, typename Allocator>
@@ -406,8 +424,6 @@ void AdaptiveRadixTree<K, V, Allocator>::remove_child_48(Node48<K> *parent, uint
         parent->indices[byte] = 0;
         parent->header.numChildren--;
     }
-
-    // TODO compact remaining children to left
 }
 
 template <ARTKey K, typename V, typename Allocator>
@@ -531,6 +547,7 @@ void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, K &key, Nod
     // copy shared prefix to new node, update old node prefix to keep suffix
     auto nodePtr = get_node(node);
     size_t matchedPrefixLen = match_prefix(nodePtr, key, depth);
+    uint8_t oldBranchingByte = nodePtr->prefix[matchedPrefixLen];
     uint8_t newBranchingByte = key[depth + matchedPrefixLen];
     if (matchedPrefixLen < nodePtr->prefixLen) {
         Node<K> *newNode = tag_node(reinterpret_cast<Node<K>*>(alloc_node<Node4<K>>(Node4<K>{
@@ -558,8 +575,8 @@ void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, K &key, Nod
         nodePtr->prefixLen = remainingLen;
         
         // update tree structure
-        add_child(newNode, key[depth + matchedPrefixLen], leaf);
-        add_child(newNode, newBranchingByte, node);
+        add_child(newNode, newBranchingByte, leaf);
+        add_child(newNode, oldBranchingByte, node);
         node = newNode;
         return;
     }
