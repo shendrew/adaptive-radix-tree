@@ -96,7 +96,6 @@ namespace ART {
             case NODE16: return nodePtr->numChildren == 16;
             case NODE48: return nodePtr->numChildren == 48;
             case NODE256: return nodePtr->numChildren == 256;
-            case NODE_LEAF: throw std::runtime_error("Leaf nodes should not be grown");
             default: throw std::runtime_error("Invalid node type");
         }
     }
@@ -109,7 +108,6 @@ namespace ART {
             case NODE16: return nodePtr->numChildren <= 3;
             case NODE48: return nodePtr->numChildren <= 12;
             case NODE256: return nodePtr->numChildren <= 32;
-            case NODE_LEAF: throw std::runtime_error("Leaf nodes should not be shrunk");
             default: throw std::runtime_error("Invalid node type");
         }
     }

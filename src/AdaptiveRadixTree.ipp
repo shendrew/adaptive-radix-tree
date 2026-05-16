@@ -24,7 +24,6 @@ void AdaptiveRadixTree<K, V, Allocator>::free_subtree(Node<K> *node) {
             case NODE48: free_subtree<Node48<K>, 48>(child); break;
             case NODE256: free_subtree<Node256<K>, 256>(child); break;
             case NODE_LEAF: free_node<Leaf<K, V>>(get_node<Leaf<K, V>*>(child)); break;
-            case default: throw std::runtime_error("Invalid node type during subtree free");
         }
     }
     
@@ -40,7 +39,6 @@ AdaptiveRadixTree<K, V, Allocator>::~AdaptiveRadixTree() {
         case NODE48: free_subtree<Node48<K>, 48>(rootNode); break;
         case NODE256: free_subtree<Node256<K>, 256>(rootNode); break;
         case NODE_LEAF: free_node<Leaf<K, V>>(get_node<Leaf<K, V>*>(rootNode)); break;
-        case default: throw std::runtime_error("Invalid root node type during tree destruction");
     }
 }
 
@@ -92,7 +90,7 @@ inline Node<K>** AdaptiveRadixTree<K, V, Allocator>::find_child_ptr(Node<K> *nod
         case NODE48: return find_child_48(get_node<Node48<K>*>(node), byte);
         case NODE256: return find_child_256(get_node<Node256<K>*>(node), byte);
         case NODE_LEAF: throw std::runtime_error("Cannot find child of a leaf node");
-        case default: throw std::runtime_error("Invalid node type during child search");
+        default: throw std::runtime_error("Invalid node type during child search");
     }
     return nullptr;
 }
@@ -171,7 +169,7 @@ inline void AdaptiveRadixTree<K, V, Allocator>::grow(Node<K> *&node) {
         case NODE48: {grow_48(node); return;}
         case NODE256: throw std::runtime_error("Cannot grow node beyond 256 children");
         case NODE_LEAF: throw std::runtime_error("Cannot grow leaf node directly");
-        case default: throw std::runtime_error("Invalid node type during node grow");
+        default: throw std::runtime_error("Invalid node type during node grow");
     }
 }
 
@@ -233,7 +231,7 @@ void AdaptiveRadixTree<K, V, Allocator>::add_child(Node<K> *&parent, uint8_t byt
         case NODE48: add_child_48(get_node<Node48<K>*>(parent), byte, child); break;
         case NODE256: add_child_256(get_node<Node256<K>*>(parent), byte, child); break;
         case NODE_LEAF: throw std::runtime_error("Cannot add child to a leaf node");
-        case default: throw std::runtime_error("Invalid node type during add child");
+        default: throw std::runtime_error("Invalid node type during add child");
     }
 }
 
@@ -359,7 +357,7 @@ inline void AdaptiveRadixTree<K, V, Allocator>::shrink(Node<K> *&node) {
         case NODE48: shrink_48(node); break;
         case NODE256: shrink_256(node); break;
         case NODE_LEAF: throw std::runtime_error("Cannot shrink leaf node directly");
-        case default: throw std::runtime_error("Invalid node type during node shrink");
+        default: throw std::runtime_error("Invalid node type during node shrink");
     }
 }
 
@@ -428,7 +426,7 @@ inline void AdaptiveRadixTree<K, V, Allocator>::remove_child(Node<K> *&parent, u
         case NODE48: remove_child_48(get_node<Node48<K>*>(parent), byte); break;
         case NODE256: remove_child_256(get_node<Node256<K>*>(parent), byte); break;
         case NODE_LEAF: throw std::runtime_error("Cannot remove child from a leaf node");
-        case default: throw std::runtime_error("Invalid node type during remove child");
+        default: throw std::runtime_error("Invalid node type during remove child");
     }
 
     if (is_small(parent)) {
@@ -666,7 +664,7 @@ void AdaptiveRadixTree<K, V, Allocator>::collect_stats(Node<K> *node, size_t dep
         case NODE48: stats.node48_count++; break;
         case NODE256: stats.node256_count++; break;
         case NODE_LEAF: throw std::runtime_error("Should not count leaf node here");
-        case default: throw std::runtime_error("Invalid node type during stats collection");
+        default: throw std::runtime_error("Invalid node type during stats collection");
     }
 
     // Recurse to all children
