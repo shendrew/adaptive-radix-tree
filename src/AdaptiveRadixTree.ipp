@@ -664,6 +664,50 @@ inline V* AdaptiveRadixTree<K, V, Allocator>::at(K &key) const {
     return nullptr;
 }
 
+// returns the first leaf in sorted order
+template <ARTKey K, typename V, typename Allocator>
+inline AdaptiveRadixTree<K, V, Allocator>::Result AdaptiveRadixTree<K, V, Allocator>::front() {
+    if (!rootNode) return Result(nullptr);
+
+    Node<K> *curNode = rootNode;
+    while (get_type(curNode) != NODE_LEAF) {
+        switch (get_type(curNode)) {
+            case NODE4: {
+                curNode = get_node<Node4<K>*>(curNode)->children[0];
+                break;
+            }
+            case NODE16: {
+                curNode = get_node<Node16<K>*>(curNode)->children[0];
+                break;
+            }
+            case NODE48: {
+                Node<K> *derived48 = get_node<Node48<K>*>(curNode);
+                for (size_t byte = 0; byte < 256; byte++) {
+                    uint8_t idx = derived48->indices[byte];
+                    if (idx) {
+                        curNode = derived48->children[idx - 1];
+                        break;
+                    }
+                }
+                break;
+            }
+            case NODE256: {
+                Node<K> *derived256 = get_node<Node256<K>*>(curNode);
+                for (size_t byte = 0; byte < 256; byte++) {
+                    if (derived256->children[byte]) {
+                        curNode = derived256->children[byte];
+                        break;
+                    }
+                }
+                break;
+            }
+            default: throw std::runtime_error("Invalid node type searching for first leaf");
+        }
+    }
+
+    return AdaptiveRadixTree<K, V, Allocator>::Result(get_node<Leaf<K, V>*>(curNode));
+}
+
 template <ARTKey K, typename V, typename Allocator>
 void AdaptiveRadixTree<K, V, Allocator>::collect_stats(Node<K> *node, size_t depth, TreeStats &stats) const {
     if (!node) return;

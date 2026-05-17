@@ -84,6 +84,18 @@ namespace ART {
         Node<K>* rootNode;
 
     public:
+        
+        // wrapper for leaf search result to hide internal nodes
+        class Result {
+        private:
+            Leaf<K, V>* leafPtr;
+        public:
+            explicit Result(Leaf<K, V>* ptr) : leafPtr(ptr) {}
+            explicit operator bool() const { return leafPtr != nullptr; }
+            const K& key() const { return leafPtr->key; }
+            V& value() const { return leafPtr->value; }
+        };
+
         AdaptiveRadixTree();
         ~AdaptiveRadixTree();
 
@@ -91,6 +103,13 @@ namespace ART {
         inline void update(K& key, V& value);
         inline void erase(K& key);
         inline V* at(K& key) const;
+        inline Result front();
+
+        //* can also do range queries but iterators are annoying to impl (left out for now)
+        // options:
+        // 1) iterator tracks stack and child ptrs then dfs (updates invalidate iter)
+        // 2) store parent ptrs in nodes (annoying maintenance)
+        // 3) chain leaf nodes together (very expensive insert/deletes)
         
         void print_info() const;
     };
