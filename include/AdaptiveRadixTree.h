@@ -51,9 +51,9 @@ namespace ART {
         static inline size_t match_prefix(const Node<K> *node, const K &key, size_t depth);
 
         // core modification helpers
-        Node<K>* search(Node<K> *node, K &key, size_t depth) const;
-        void insert_impl(Node<K> *&node, K &key, Node<K> *leaf, size_t depth, bool is_update);
-        bool erase_impl(Node<K> *&node, K &key, size_t depth);
+        Node<K>* search(Node<K> *node, const K &key, size_t depth) const;
+        void insert_impl(Node<K> *&node, const K &key, Node<K> *leaf, size_t depth, bool is_update);
+        bool erase_impl(Node<K> *&node, const K &key, size_t depth);
 
         inline void grow(Node<K> *&node);
         void grow_4(Node<K> *&node);
@@ -99,10 +99,14 @@ namespace ART {
         AdaptiveRadixTree();
         ~AdaptiveRadixTree();
 
-        inline void insert(K& key, V& value);
-        inline void update(K& key, V& value);
-        inline void erase(K& key);
-        inline V* at(K& key) const;
+        inline void insert(const K& key, const V& value);
+        inline void insert(const K& key, V&& value);
+
+        inline void update(const K& key, const V& value);
+        inline void update(const K& key, V&& value);
+
+        inline void erase(const K& key);
+        inline V* at(const K& key) const;
         inline Result front();
 
         //* can also do range queries but iterators are annoying to impl (left out for now)

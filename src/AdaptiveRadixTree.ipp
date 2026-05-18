@@ -462,7 +462,7 @@ inline size_t AdaptiveRadixTree<K, V, Allocator>::match_prefix(const Node<K> *no
 }
 
 template <ARTKey K, typename V, typename Allocator>
-Node<K>* AdaptiveRadixTree<K, V, Allocator>::search(Node<K> *node, K &key, size_t depth) const {
+Node<K>* AdaptiveRadixTree<K, V, Allocator>::search(Node<K> *node, const K &key, size_t depth) const {
     if (!node) return nullptr;
 
     if (get_type(node) == NODE_LEAF) {
@@ -490,7 +490,7 @@ Node<K>* AdaptiveRadixTree<K, V, Allocator>::search(Node<K> *node, K &key, size_
 
 // need to take in ref to node to restructure tree if needed
 template <ARTKey K, typename V, typename Allocator>
-void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, K &key, Node<K> *leaf, size_t depth, bool is_update) {    
+void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, const K &key, Node<K> *leaf, size_t depth, bool is_update) {    
     // CASE 1: empty slot, insert leaf here
     if (!node) {
         node = leaf;
@@ -500,10 +500,6 @@ void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, K &key, Nod
     // CASE 2: diverges at leaf (ie: branching byte equal, diff key)
     // split leaf into new node with 2 children
     if (get_type(node) == NODE_LEAF) {
-        std::cout << "node address: " << node << std::endl;
-        std::cout << "node ptr: " << get_node(node) << std::endl;
-
-
         const K& oldKey = get_leaf_key<K, V>(node);
         // check for inplace update
         if (oldKey == key) {
@@ -533,7 +529,7 @@ void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, K &key, Nod
         // copy shared prefix to new node
         Node4<K> *derived4 = get_node<Node4<K>*>(newNode);
         std::memcpy(reinterpret_cast<uint8_t*>(&derived4->header.prefix), 
-                    reinterpret_cast<uint8_t*>(&key) + depth, 
+                    reinterpret_cast<const uint8_t*>(&key) + depth, 
                     sharedLen);
         
         depth = depth + sharedLen;
@@ -595,7 +591,7 @@ void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, K &key, Nod
 
 // return true if need to erase
 template <ARTKey K, typename V, typename Allocator>
-bool AdaptiveRadixTree<K, V, Allocator>::erase_impl(Node<K> *&node, K &key, size_t depth) {
+bool AdaptiveRadixTree<K, V, Allocator>::erase_impl(Node<K> *&node, const K &key, size_t depth) {
     if (!node) return false;
 
     if (get_type(node) == NODE_LEAF) {
@@ -626,7 +622,7 @@ bool AdaptiveRadixTree<K, V, Allocator>::erase_impl(Node<K> *&node, K &key, size
 
 
 template <ARTKey K, typename V, typename Allocator>
-inline void AdaptiveRadixTree<K, V, Allocator>::insert(K &key, V &value) {
+inline void AdaptiveRadixTree<K, V, Allocator>::insert(const K &key, const V &value) {
     Node<K> *leafNode = reinterpret_cast<Node<K>*>(alloc_node<Leaf<K, V>>(Leaf<K, V>{
         .key = key,
         .value = value
@@ -635,7 +631,16 @@ inline void AdaptiveRadixTree<K, V, Allocator>::insert(K &key, V &value) {
 }
 
 template <ARTKey K, typename V, typename Allocator>
-inline void AdaptiveRadixTree<K, V, Allocator>::update(K &key, V &value) {
+inline void AdaptiveRadixTree<K, V, Allocator>::insert(const K &key, V &&value) {
+    Node<K> *leafNode = reinterpret_cast<Node<K>*>(alloc_node<Leaf<K, V>>(Leaf<K, V>{
+        .key = key,
+        .value = std::move(value)
+    }));
+    insert_impl(rootNode, key, tag_node(leafNode, NODE_LEAF), 0, false);
+}
+
+template <ARTKey K, typename V, typename Allocator>
+inline void AdaptiveRadixTree<K, V, Allocator>::update(const K &key, const V &value) {
     Node<K> *leafNode = reinterpret_cast<Node<K>*>(alloc_node<Leaf<K, V>>(Leaf<K, V>{
         .key = key,
         .value = value
@@ -644,17 +649,25 @@ inline void AdaptiveRadixTree<K, V, Allocator>::update(K &key, V &value) {
 }
 
 template <ARTKey K, typename V, typename Allocator>
-inline void AdaptiveRadixTree<K, V, Allocator>::erase(K &key) {
+inline void AdaptiveRadixTree<K, V, Allocator>::update(const K &key, V &&value) {
+    Node<K> *leafNode = reinterpret_cast<Node<K>*>(alloc_node<Leaf<K, V>>(Leaf<K, V>{
+        .key = key,
+        .value = std::move(value)
+    }));
+    insert_impl(rootNode, key, tag_node(leafNode, NODE_LEAF), 0, true);
+}
+
+template <ARTKey K, typename V, typename Allocator>
+inline void AdaptiveRadixTree<K, V, Allocator>::erase(const K &key) {
     if (erase_impl(rootNode, key, 0)) {
         rootNode = nullptr;
     }
 }
 
 template <ARTKey K, typename V, typename Allocator>
-inline V* AdaptiveRadixTree<K, V, Allocator>::at(K &key) const {
+inline V* AdaptiveRadixTree<K, V, Allocator>::at(const K &key) const {
     if (!rootNode) return nullptr;
 
-    // encode key to byte array
     Node<K> *resultNode = search(rootNode, key, 0);
 
     // return value ptr if leaf found
@@ -681,7 +694,7 @@ inline AdaptiveRadixTree<K, V, Allocator>::Result AdaptiveRadixTree<K, V, Alloca
                 break;
             }
             case NODE48: {
-                Node<K> *derived48 = get_node<Node48<K>*>(curNode);
+                Node48<K> *derived48 = get_node<Node48<K>*>(curNode);
                 for (size_t byte = 0; byte < 256; byte++) {
                     uint8_t idx = derived48->indices[byte];
                     if (idx) {
@@ -692,7 +705,7 @@ inline AdaptiveRadixTree<K, V, Allocator>::Result AdaptiveRadixTree<K, V, Alloca
                 break;
             }
             case NODE256: {
-                Node<K> *derived256 = get_node<Node256<K>*>(curNode);
+                Node256<K> *derived256 = get_node<Node256<K>*>(curNode);
                 for (size_t byte = 0; byte < 256; byte++) {
                     if (derived256->children[byte]) {
                         curNode = derived256->children[byte];
