@@ -22,20 +22,24 @@ namespace ART {
     template <ARTKey K, typename V, typename Allocator = std::allocator<uint8_t>>     // default to standard single byte allocator
     class AdaptiveRadixTree{
     private:
+        Allocator allocator;
+        Node<K> *rootNode;
+
         template <typename NodeType>
         using NodeAllocator = typename std::allocator_traits<Allocator>::template rebind_alloc<NodeType>;
 
         template <typename NodeType, typename T>
         NodeType* alloc_node(T&& value) {
-            NodeAllocator<NodeType> allocProxy;
+            NodeAllocator<NodeType> allocProxy = allocator;
             NodeType* ptr = allocProxy.allocate(1);
             return new (ptr) NodeType(std::forward<T>(value));
         }
 
         template <typename NodeType>
         void free_node(NodeType *node) {
+            NodeAllocator<NodeType> allocProxy = allocator;
             std::destroy_at(node);
-            NodeAllocator<NodeType>().deallocate(node, 1);
+            allocProxy.deallocate(node, 1);
         }
 
         template <typename NodeType, size_t MaxChildren>
@@ -80,11 +84,7 @@ namespace ART {
 
         void collect_stats(Node<K> *node, size_t depth, TreeStats &stats) const;
 
-        // private members
-        Node<K>* rootNode;
-
     public:
-        
         // wrapper for leaf search result to hide internal nodes
         class Result {
         private:
@@ -97,6 +97,7 @@ namespace ART {
         };
 
         AdaptiveRadixTree();
+        explicit AdaptiveRadixTree(const Allocator &alloc);
         ~AdaptiveRadixTree();
 
         inline void insert(const K& key, const V& value);

@@ -6,7 +6,14 @@
 using namespace ART;
 
 template <ARTKey K, typename V, typename Allocator>
-AdaptiveRadixTree<K, V, Allocator>::AdaptiveRadixTree() : rootNode(nullptr) {}
+AdaptiveRadixTree<K, V, Allocator>::AdaptiveRadixTree()
+: rootNode(nullptr)
+, allocator() {}
+
+template <ARTKey K, typename V, typename Allocator>
+AdaptiveRadixTree<K, V, Allocator>::AdaptiveRadixTree(const Allocator &alloc)
+: rootNode(nullptr)
+, allocator(alloc) {}
 
 template <ARTKey K, typename V, typename Allocator>
 template <typename NodeType, size_t MaxChildren>
