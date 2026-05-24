@@ -5,7 +5,7 @@
 #include <bit>
 
 template <typename K>
-struct alignas(64) Encoding {
+struct Encoding {
     std::array<uint8_t, sizeof(K)> bytes{};
 
     constexpr size_t size() const {

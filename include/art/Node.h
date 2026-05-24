@@ -23,9 +23,10 @@ namespace ART {
     ;
 
     // align nodes to 64 bytes for better cache performance
+    // custom allocator handles the alignment
     // 6 lower bits for tags
     template <ARTKey K>
-    struct alignas(64) Node {
+    struct Node {
         uint8_t numChildren;
         uint16_t prefixLen;
         K prefix;  // store full prefix; filled from index 0, rest is unused

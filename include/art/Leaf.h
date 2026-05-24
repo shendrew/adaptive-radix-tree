@@ -9,7 +9,7 @@ namespace ART {
 
     // must reinterpret cast pointer to Node*
     template <ARTKey K, typename V>
-    struct alignas(64) Leaf {
+    struct Leaf {
         K key;
         V value;
     };
