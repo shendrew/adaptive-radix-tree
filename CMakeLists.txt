@@ -36,6 +36,22 @@ if(ART_BUILD_TESTS)
             target_link_libraries(art_tests PRIVATE ART::AdaptiveRadixTree GTest::gtest_main)
             include(GoogleTest)
             gtest_discover_tests(art_tests)
+            
+            # Custom test run target
+            add_custom_target(gtest
+                COMMAND ./art_tests
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                DEPENDS art_tests
+                COMMENT "Running ART tests..."
+            )
+            
+            # Valgrind memory leak check target
+            add_custom_target(valgrind
+                COMMAND valgrind --leak-check=full --show-leak-kinds=all --log-file=valgrind.txt ./art_tests
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                DEPENDS art_tests
+                COMMENT "Running Valgrind memory leak check..."
+            )
         endif()
     endif()
 endif()
