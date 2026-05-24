@@ -7,22 +7,75 @@
 
 namespace mempool {
 
-    constexpr size_t BLOCK_SIZE = 4096;
+    constexpr size_t DEFAULT_COUNT = 1000;
+    constexpr size_t SMALL_SIZE = 256;
+    constexpr size_t MEDIUM_SIZE = 1024;
+    constexpr size_t LARGE_SIZE = 4096;
 
     // Mempool header
     class Mempool {
+    private:
+        class Pool {
+            char *pool;
+            size_t blockSize;
+            size_t freeCnt;
+            size_t *freeStack;
+            size_t head;
+
+        public:
+            Pool(size_t size, size_t count) : blockSize(size), freeCnt(count), head(0) {
+                pool = static_cast<char*>(std::aligned_alloc(64, blockSize * count));
+                freeStack = new size_t[count];
+                for (size_t i = 0; i < count; i++) {
+                    freeStack[i] = i;
+                }
+            }
+            ~Pool() {
+                std::free(pool);
+                delete[] freeStack;
+            }
+
+            void* allocate() {
+                if (freeCnt == 0) throw std::bad_alloc();
+                freeCnt--;
+                return pool + blockSize * freeStack[head++];
+            }
+
+            void deallocate(void* ptr) {
+                size_t offset = (static_cast<char*>(ptr) - pool) / blockSize;
+                freeStack[--head] = offset;
+                freeCnt++;
+            }
+        };
+
+        Pool smallPool;
+        Pool mediumPool;
+        Pool largePool;
 
     public:
-        void *allocate(size_t size) {
-            return nullptr;
+        // allocates 64 byte aligned pools
+        Mempool(size_t smallCount = DEFAULT_COUNT, size_t mediumCount = DEFAULT_COUNT, size_t largeCount = DEFAULT_COUNT)
+        : smallPool(SMALL_SIZE, smallCount)
+        , mediumPool(MEDIUM_SIZE, mediumCount)
+        , largePool(LARGE_SIZE, largeCount) {}
+
+        ~Mempool() = default;
+        Mempool(const Mempool &other) = delete;
+        Mempool(const Mempool &&other) = delete;
+
+        void* allocate(size_t size) {
+            if (size <= SMALL_SIZE) return smallPool.allocate();
+            else if (size <= MEDIUM_SIZE) return mediumPool.allocate();
+            else if (size <= LARGE_SIZE) return largePool.allocate();
+            else throw std::bad_alloc();
         }
 
+        // trust that caller only deallocate valid ptrs, and at most once
         void deallocate(void *ptr, size_t size) {
-            // deallocate memory
-        }
-
-        Mempool* get() {
-            return this;
+            if (size <= SMALL_SIZE) return smallPool.deallocate(ptr);
+            else if (size <= MEDIUM_SIZE) return mediumPool.deallocate(ptr);
+            else if (size <= LARGE_SIZE) return largePool.deallocate(ptr);
+            else throw std::exception();
         }
     };
 
@@ -31,7 +84,8 @@ namespace mempool {
     template <typename T>
     class MempoolAllocator {
     private:
-        std::shared_ptr<Mempool> pool;
+        // pool injected by caller, caller needs to manage lifetime
+        Mempool *pool;
 
         template <typename U>
         friend class MempoolAllocator;
@@ -53,10 +107,9 @@ namespace mempool {
             using other = MempoolAllocator<U>;
         };
 
-        MempoolAllocator() : pool(std::make_shared<Mempool>()) {}
+        explicit MempoolAllocator(Mempool *mempool) noexcept : pool(mempool) {}
 
         // create templated allocator for diff types
-        // copy shared_ptr to new template instance U
         // !!! currently not thread safe
         template <typename U>
         MempoolAllocator(const MempoolAllocator<U>& other) noexcept : pool(other.pool) {}
@@ -73,11 +126,11 @@ namespace mempool {
         // might be needed if trees get copied and want to share pool
         template <typename U>
         bool operator==(const MempoolAllocator<U>& other) const noexcept {
-            return pool.get() == other.pool.get();
+            return pool == other.pool;
         }
         template <typename U>
         bool operator!=(const MempoolAllocator<U>& other) const noexcept {
-            return pool.get() != other.pool.get();
+            return pool != other.pool;
         }
     };
 }

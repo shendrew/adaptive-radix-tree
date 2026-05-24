@@ -1,17 +1,20 @@
 #include "AdaptiveRadixTree.h"
 #include "art/Encoding.h"
+#include "Mempool.h"
 
 #include <cstdint>
 #include <iostream>
 
 int main() {
-    ART::AdaptiveRadixTree<Encoding<uint64_t>, int> tree;
+    mempool::Mempool pool{};
+    mempool::MempoolAllocator<uint8_t> allocator{&pool};
+    ART::AdaptiveRadixTree<Encoding<uint64_t>, int, mempool::MempoolAllocator<uint8_t>> tree{allocator};
 
-    Encoding<uint64_t> key1(1ULL);
-    Encoding<uint64_t> key2(2ULL);
-    Encoding<uint64_t> key3(3ULL);;
-    Encoding<uint64_t> key4(4ULL);;
-    Encoding<uint64_t> key5(5ULL);;
+    Encoding<uint64_t> key1{1ULL};
+    Encoding<uint64_t> key2{2ULL};
+    Encoding<uint64_t> key3{3ULL};
+    Encoding<uint64_t> key4{4ULL};
+    Encoding<uint64_t> key5{5ULL};
 
     int value1 = 10;
     int value2 = 20;
@@ -24,7 +27,7 @@ int main() {
     tree.insert(key3, value3);
     tree.insert(key4, value4);
     tree.insert(key5, value5);
-
+    
 
     std::cout << "Value for key1: " << *(tree.at(key1)) << std::endl;
     std::cout << "Value for key2: " << *(tree.at(key2)) << std::endl;
