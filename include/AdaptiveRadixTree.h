@@ -56,8 +56,9 @@ namespace ART {
 
         // core modification helpers
         Node<K>* search(Node<K> *node, const K &key, size_t depth) const;
-        void insert_impl(Node<K> *&node, const K &key, Node<K> *leaf, size_t depth, bool is_update);
         bool erase_impl(Node<K> *&node, const K &key, size_t depth);
+        template <bool is_update>
+        void insert_impl(Node<K> *&node, const K &key, Node<K> *leaf, size_t depth);
 
         inline void grow(Node<K> *&node);
         void grow_4(Node<K> *&node);

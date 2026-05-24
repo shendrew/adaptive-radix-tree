@@ -497,7 +497,8 @@ Node<K>* AdaptiveRadixTree<K, V, Allocator>::search(Node<K> *node, const K &key,
 
 // need to take in ref to node to restructure tree if needed
 template <ARTKey K, typename V, typename Allocator>
-void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, const K &key, Node<K> *leaf, size_t depth, bool is_update) {    
+template <bool is_update>
+void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, const K &key, Node<K> *leaf, size_t depth) {    
     // CASE 1: empty slot, insert leaf here
     if (!node) {
         node = leaf;
@@ -510,7 +511,7 @@ void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, const K &ke
         const K& oldKey = get_leaf_key<K, V>(node);
         // check for inplace update
         if (oldKey == key) {
-            if (is_update) {
+            if constexpr (is_update) {
                 *(get_leaf_value<K, V>(node)) = *(get_leaf_value<K, V>(leaf));
             }
             free_node<Leaf<K, V>>(get_node<Leaf<K, V>*>(leaf));
@@ -634,7 +635,7 @@ inline void AdaptiveRadixTree<K, V, Allocator>::insert(const K &key, const V &va
         .key = key,
         .value = value
     }));
-    insert_impl(rootNode, key, tag_node(leafNode, NODE_LEAF), 0, false);
+    insert_impl<false>(rootNode, key, tag_node(leafNode, NODE_LEAF), 0);
 }
 
 template <ARTKey K, typename V, typename Allocator>
@@ -643,7 +644,7 @@ inline void AdaptiveRadixTree<K, V, Allocator>::insert(const K &key, V &&value) 
         .key = key,
         .value = std::move(value)
     }));
-    insert_impl(rootNode, key, tag_node(leafNode, NODE_LEAF), 0, false);
+    insert_impl<false>(rootNode, key, tag_node(leafNode, NODE_LEAF), 0);
 }
 
 template <ARTKey K, typename V, typename Allocator>
@@ -652,7 +653,7 @@ inline void AdaptiveRadixTree<K, V, Allocator>::update(const K &key, const V &va
         .key = key,
         .value = value
     }));
-    insert_impl(rootNode, key, tag_node(leafNode, NODE_LEAF), 0, true);
+    insert_impl<true>(rootNode, key, tag_node(leafNode, NODE_LEAF), 0);
 }
 
 template <ARTKey K, typename V, typename Allocator>
@@ -661,7 +662,7 @@ inline void AdaptiveRadixTree<K, V, Allocator>::update(const K &key, V &&value) 
         .key = key,
         .value = std::move(value)
     }));
-    insert_impl(rootNode, key, tag_node(leafNode, NODE_LEAF), 0, true);
+    insert_impl<true>(rootNode, key, tag_node(leafNode, NODE_LEAF), 0);
 }
 
 template <ARTKey K, typename V, typename Allocator>
