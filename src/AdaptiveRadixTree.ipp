@@ -589,7 +589,7 @@ void AdaptiveRadixTree<K, V, Allocator>::insert_impl(Node<K> *&node, const K &ke
     depth = depth + nodePtr->prefixLen;
     Node<K> **nextPtr = find_child_ptr(node, key[depth]);
     if (nextPtr) {
-        insert_impl(*nextPtr, key, leaf, depth+1, is_update);
+        insert_impl<is_update>(*nextPtr, key, leaf, depth+1);
     } else {
         // CASE 5: no matching child, insert leaf here
         // guaranteed to have space since at most 256 diff byte values
