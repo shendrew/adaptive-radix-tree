@@ -2,6 +2,7 @@
 #define ADAPTIVE_RADIX_TREE_H
 
 #include <memory>
+#include <new>
 #include <utility>
 #include <vector>
 #include "art/Node.h"
@@ -18,8 +19,10 @@ namespace ART {
         std::vector<size_t> depths;
     };
 
+    using DefaultAllocator = std::allocator<uint8_t>;
+
     // Adaptive Radix Tree header
-    template <ARTKey K, typename V, typename Allocator = std::allocator<uint8_t>>     // default to standard single byte allocator
+    template <ARTKey K, typename V, typename Allocator = DefaultAllocator>     // default to standard single byte allocator
     class AdaptiveRadixTree{
     private:
         Allocator allocator;
@@ -30,16 +33,26 @@ namespace ART {
 
         template <typename NodeType, typename T>
         NodeType* alloc_node(T&& value) {
-            NodeAllocator<NodeType> allocProxy = allocator;
-            NodeType* ptr = allocProxy.allocate(1);
-            return new (ptr) NodeType(std::forward<T>(value));
+            if constexpr (std::is_same_v<Allocator, DefaultAllocator>) {
+                void* ptr = operator new(sizeof(NodeType), std::align_val_t(64));
+                return new (ptr) NodeType(std::forward<T>(value));
+            } else {
+                NodeAllocator<NodeType> allocProxy = allocator;
+                NodeType* ptr = allocProxy.allocate(1);
+                return new (ptr) NodeType(std::forward<T>(value));
+            }
         }
 
         template <typename NodeType>
         void free_node(NodeType *node) {
-            NodeAllocator<NodeType> allocProxy = allocator;
-            std::destroy_at(node);
-            allocProxy.deallocate(node, 1);
+            if constexpr (std::is_same_v<Allocator, DefaultAllocator>) {
+                std::destroy_at(node);
+                operator delete(node, std::align_val_t(64));
+            } else {
+                NodeAllocator<NodeType> allocProxy = allocator;
+                std::destroy_at(node);
+                allocProxy.deallocate(node, 1);
+            }
         }
 
         template <typename NodeType, size_t MaxChildren>
