@@ -36,14 +36,22 @@ else()
     find_package(benchmark CONFIG QUIET)
 endif()
 
+include(FetchContent)
+set(ABSL_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(ABSL_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    abseil
+    GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+    GIT_TAG 20240116.2
+)
+FetchContent_MakeAvailable(abseil)
+
 if(ART_REQUIRE_BENCHMARK_PFM AND NOT PFM_LIB)
     message(FATAL_ERROR "libpfm not found. Install libpfm or set ART_REQUIRE_BENCHMARK_PFM=OFF")
 endif()
 
 if(NOT ART_USE_BUNDLED_BENCHMARK AND NOT benchmark_FOUND)
     message(STATUS "benchmark library not found - skipping benchmarks")
-elseif(NOT EXISTS "${CMAKE_SOURCE_DIR}/third_party/cpp-btree")
-    message(STATUS "cpp-btree submodule not initialized - skipping benchmarks. Run: git submodule update --init third_party/cpp-btree")
 else()
     file(GLOB_RECURSE ART_BENCHMARK_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
     if(ART_BENCHMARK_SOURCES)
@@ -56,7 +64,7 @@ else()
         apply_zen4_optimizations(art_benchmarks)
 
         target_include_directories(art_benchmarks PRIVATE 
-            "${CMAKE_SOURCE_DIR}/third_party/cpp-btree"
+            "${abseil_SOURCE_DIR}"
             "${CMAKE_CURRENT_SOURCE_DIR}"
         )
         target_link_libraries(art_benchmarks PRIVATE ART::AdaptiveRadixTree benchmark::benchmark_main)
@@ -76,6 +84,6 @@ else()
             WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
         )
         
-        message(STATUS "cpp-btree benchmarks enabled")
+        message(STATUS "Abseil btree benchmarks enabled")
     endif()
 endif()

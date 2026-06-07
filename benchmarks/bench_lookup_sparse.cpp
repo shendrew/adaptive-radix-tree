@@ -8,8 +8,10 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 #include <numeric>
 #include <random>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -23,8 +25,7 @@ using BtreeValue = std::pair<const uint64_t, uint64_t>;
 using BtreeAllocator = mempool::MempoolAllocator<BtreeValue>;
 using Btree = absl::btree_map<uint64_t, uint64_t, std::less<uint64_t>, BtreeAllocator>;
 
-constexpr uint64_t kDenseSeed = 0x9E3779B97F4A7C15ULL;
-
+constexpr uint64_t kSparseSeed = 0xD1B54A32D192ED03ULL;
 
 struct PoolCounts {
 	size_t small;
@@ -45,12 +46,22 @@ PoolCounts estimate_pool_counts(size_t count) {
 	};
 }
 
-Keys build_dense_keys(size_t count) {
+Keys build_sparse_keys(size_t count) {
 	Keys keys;
-	keys.insert_order.resize(count);
-	std::iota(keys.insert_order.begin(), keys.insert_order.end(), 1ULL);
+	keys.insert_order.reserve(count);
 
-	std::mt19937_64 rng(kDenseSeed);
+	std::mt19937_64 rng(kSparseSeed);
+	std::uniform_int_distribution<uint64_t> distribution(
+		std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max());
+
+	std::unordered_set<uint64_t> unique_keys;
+	unique_keys.reserve(count * 2);
+
+	while (unique_keys.size() < count) {
+		unique_keys.insert(distribution(rng));
+	}
+
+	keys.insert_order.assign(unique_keys.begin(), unique_keys.end());
 	std::shuffle(keys.insert_order.begin(), keys.insert_order.end(), rng);
 
 	keys.query_order = keys.insert_order;
@@ -66,7 +77,7 @@ struct BaseFixture {
 		: pool(estimate_pool_counts(count).small,
 			  estimate_pool_counts(count).medium,
 			  estimate_pool_counts(count).large)
-		, keys(build_dense_keys(count)) {}
+		, keys(build_sparse_keys(count)) {}
 };
 
 struct ArtFixture : BaseFixture {
@@ -78,6 +89,7 @@ struct ArtFixture : BaseFixture {
 		: BaseFixture(count)
 		, allocator(&pool)
 		, tree(allocator) {
+			
 		queries.reserve(keys.query_order.size());
 		for (uint64_t value : keys.insert_order) {
 			KeyType key(value);
@@ -107,7 +119,7 @@ struct BtreeFixture : BaseFixture {
 };
 }  // namespace
 
-static void BenchLookupDenseART(benchmark::State& state) {
+static void BenchLookupSparseART(benchmark::State& state) {
 	const size_t count = static_cast<size_t>(state.range(0));
 
 	ArtFixture fixture(count);
@@ -126,7 +138,7 @@ static void BenchLookupDenseART(benchmark::State& state) {
 					   benchmark::Counter::kIsRate);
 }
 
-static void BenchLookupDenseBtree(benchmark::State& state) {
+static void BenchLookupSparseBtree(benchmark::State& state) {
 	const size_t count = static_cast<size_t>(state.range(0));
 
 	BtreeFixture fixture(count);
@@ -148,17 +160,16 @@ static void BenchLookupDenseBtree(benchmark::State& state) {
 					   benchmark::Counter::kIsRate);
 }
 
-BENCHMARK(BenchLookupDenseART)
+BENCHMARK(BenchLookupSparseART)
 	->Arg(64 * 1024)            // 64K
 	->Arg(1 * 1024 * 1024)      // 1M
 	->Arg(16 * 1024 * 1024)     // 16M
 	// ->Arg(256 * 1024 * 1024)    // 256M
 	->UseRealTime();
 
-BENCHMARK(BenchLookupDenseBtree)
+BENCHMARK(BenchLookupSparseBtree)
 	->Arg(64 * 1024)            // 64K
 	->Arg(1 * 1024 * 1024)      // 1M
 	->Arg(16 * 1024 * 1024)     // 16M
 	// ->Arg(256 * 1024 * 1024)    // 256M
 	->UseRealTime();
-

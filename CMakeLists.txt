@@ -56,7 +56,7 @@ if(ART_BUILD_TESTS)
     endif()
 endif()
 
-# Benchmarks Block (requires cpp-btree submodule)
+# Benchmarks Block (uses Abseil btree_map)
 if(ART_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
